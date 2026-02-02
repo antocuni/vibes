@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            font-family: 'Courier New', monospace;
+            color: #e0e0e0;
+        }
+
+        .game-container {
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #00ff88;
+            text-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+        }
+
+        .score-board {
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .score-board span {
+            color: #aaa;
+        }
+
+        .score-board .value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        canvas {
+            border: 2px solid #00ff88;
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.15);
+            display: block;
+            margin: 0 auto;
+        }
+
+        .overlay {
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.75);
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .overlay.hidden {
+            display: none;
+        }
+
+        .overlay h2 {
+            font-size: 1.8rem;
+            color: #ff4444;
+            margin-bottom: 0.5rem;
+        }
+
+        .overlay p {
+            font-size: 1rem;
+            color: #ccc;
+        }
+
+        .start-overlay h2 {
+            color: #00ff88;
+        }
+
+        .controls {
+            margin-top: 1rem;
+            font-size: 0.85rem;
+            color: #666;
+        }
+
+        .controls kbd {
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 3px;
+            padding: 2px 6px;
+            font-family: inherit;
+            color: #ccc;
+        }
+
+        .canvas-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Snake</h1>
+        <div class="score-board">
+            <div><span>Score: </span><span class="value" id="score">0</span></div>
+            <div><span>High Score: </span><span class="value" id="high-score">0</span></div>
+        </div>
+        <div class="canvas-wrapper">
+            <canvas id="game" width="400" height="400"></canvas>
+            <div class="overlay start-overlay" id="start-overlay">
+                <h2>Snake</h2>
+                <p>Press any arrow key or Space to start</p>
+            </div>
+            <div class="overlay hidden" id="gameover-overlay">
+                <h2>Game Over</h2>
+                <p>Press Space or Enter to restart</p>
+            </div>
+        </div>
+        <div class="controls">
+            <kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or
+            <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> to move &mdash;
+            <kbd>P</kbd> to pause
+        </div>
+    </div>
+
+    <script src="snake.js"></script>
+</body>
+</html>
