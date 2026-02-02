@@ -48,7 +48,9 @@ for d in repo_dir.iterdir():
 
 # Print the heading with count
 if subdirs_with_dates:
-    print(f"## {len(subdirs_with_dates)} projects\n")
+    n = len(subdirs_with_dates)
+    label = "project" if n == 1 else "projects"
+    print(f"## {n} {label}\n")
 
     # Sort by date, most recent first
     subdirs_with_dates.sort(key=lambda x: x[1], reverse=True)
@@ -148,9 +150,7 @@ The script automatically:
 - Gets the first commit date for each folder and sorts by most recent first
 - For each folder, checks if a `_summary.md` file exists
 - If the summary exists, it uses the cached version
-- If not, it generates a new summary using `llm -m <!--[[[cog
-print(MODEL, end='')
-]]]--><!--[[[end]]]-->` with a prompt that creates engaging descriptions with bullets and links
+- If not, it generates a new summary using `llm -m github/gpt-4.1` with a prompt that creates engaging descriptions with bullets and links
 - Creates markdown links to each project folder on GitHub
 - New summaries are saved to `_summary.md` to avoid regenerating them on every run
 
