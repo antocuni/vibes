@@ -1,5 +1,11 @@
 # vibes
 
+**WARNING: this is almost 100% AI SLOP**
+
+Most of the text and code in this repository has been written by AI assistants. This sentence has been written by a human :).
+
+---
+
 A repository for vibe coding experiments and AI-assisted explorations.
 
 Each directory in this repo is a separate project or exploration carried out with the help of AI coding assistants like [Claude Code](https://www.claude.com/product/claude-code). The work may include experiments, prototypes, research, or learning exercises.
