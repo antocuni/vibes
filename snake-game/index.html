@@ -139,7 +139,7 @@ footer {
         <article>
 <p><a class="app-link" href="app/">Launch App</a></p>
 <h1 id="snake-game">Snake Game</h1>
-<p>A classic Snake game built with pure HTML, CSS, and vanilla JavaScript - no frameworks or dependencies.</p>
+<p>A classic Snake game built with pure HTML, CSS, and vanilla JavaScript - no frameworks or dependencies. Fully playable on both desktop and mobile devices.</p>
 <h2 id="what-was-explored">What was explored</h2>
 <p>Building a complete, polished browser game using only vanilla web technologies. The goal was to create a clean, playable Snake implementation with smooth visuals and responsive controls.</p>
 <h2 id="implementation">Implementation</h2>
@@ -150,6 +150,8 @@ footer {
 <li><strong>High score persistence</strong> - stores the best score in <code>localStorage</code></li>
 <li><strong>Visual polish</strong> - rounded snake segments, glowing food, subtle grid lines, dark theme</li>
 <li><strong>Keyboard controls</strong> - arrow keys or WASD for movement, P to pause, Space/Enter to start/restart</li>
+<li><strong>Mobile support</strong> - swipe gestures on the canvas for direction, on-screen D-pad with pause button, tap to start/restart</li>
+<li><strong>Responsive layout</strong> - canvas scales to fit mobile screens; D-pad and mobile hints shown automatically on touch devices</li>
 <li><strong>Anti-reversal</strong> - prevents the snake from doing a 180-degree turn into itself</li>
 </ul>
 <h2 id="key-findings">Key findings</h2>
@@ -165,10 +167,15 @@ python3 -m http.server 8000 --directory snake-game
 # Then open http://localhost:8000
 </code></pre>
 
-<p>Controls:
+<p>Desktop controls:
 - <strong>Arrow keys</strong> or <strong>WASD</strong> - move the snake
 - <strong>P</strong> - pause/unpause
 - <strong>Space</strong> or <strong>Enter</strong> - start or restart after game over</p>
+<p>Mobile controls:
+- <strong>Swipe</strong> on the game canvas to change direction
+- <strong>D-pad</strong> buttons below the canvas for directional input
+- <strong>Tap</strong> the canvas to start, restart, or pause
+- <strong>PAUSE</strong> button in the center of the D-pad to pause/unpause</p>
         </article>
         <footer>
             Built automatically from project README files.
