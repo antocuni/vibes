@@ -124,6 +124,12 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
+## 1 project
+
+### [snake-game](https://github.com/antocuni/vibes/tree/main/snake-game) (2026-02-02)
+
+*No description available.*
+
 <!--[[[end]]]-->
 
 ---
