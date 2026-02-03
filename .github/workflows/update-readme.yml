@@ -63,10 +63,13 @@ jobs:
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          # Create a temporary directory for deployment
+          # Move built site to a temp directory outside the repo
           DEPLOY_DIR=$(mktemp -d)
           cp -r _site/* "$DEPLOY_DIR/"
-          cp -r _site/.nojekyll "$DEPLOY_DIR/" 2>/dev/null || true
+          cp _site/.nojekyll "$DEPLOY_DIR/" 2>/dev/null || true
+
+          # Remove the build output before switching branches
+          rm -rf _site
 
           # Switch to gh-pages branch (create if doesn't exist)
           if git ls-remote --heads origin gh-pages | grep -q gh-pages; then
@@ -77,10 +80,13 @@ jobs:
             git rm -rf .
           fi
 
-          # Clean and copy new content
+          # Remove all existing content
           git rm -rf . 2>/dev/null || true
+          rm -rf * .nojekyll 2>/dev/null || true
+
+          # Copy new site content
           cp -r "$DEPLOY_DIR"/* .
-          cp -r "$DEPLOY_DIR"/.nojekyll . 2>/dev/null || true
+          cp "$DEPLOY_DIR"/.nojekyll . 2>/dev/null || true
 
           # Commit and push
           git add -A
