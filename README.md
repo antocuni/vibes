@@ -99,24 +99,26 @@ if subdirs_with_dates:
         elif readme_path.exists():
             # Generate new summary using llm command
             prompt = """Summarize this project concisely. Write just 1 paragraph (3-5 sentences) followed by an optional short bullet list if there are key findings or features. Vary your opening - don't start with "This project" or "This explores". Include 1-2 links to key tools/projects if relevant. Be specific but brief. No emoji."""
-            try:
-                result = subprocess.run(
-                    ['llm', '-m', MODEL, '-s', prompt],
-                    stdin=open(readme_path),
-                    capture_output=True,
-                    text=True,
-                    timeout=60
-                )
-                if result.returncode == 0 and result.stdout.strip():
-                    description = result.stdout.strip()
-                    print(description)
-                    # Save to cache file
-                    with open(summary_path, 'w') as f:
-                        f.write(description + '\n')
-                else:
-                    print("*No description available.*")
-            except Exception:
-                print("*No description available.*")
+            result = subprocess.run(
+                ['llm', '-m', MODEL, '-s', prompt],
+                stdin=open(readme_path),
+                capture_output=True,
+                text=True,
+                timeout=60
+            )
+            if result.returncode != 0:
+                error_msg = f"LLM command failed for {dirname} with return code {result.returncode}"
+                if result.stderr:
+                    error_msg += f"\nStderr: {result.stderr}"
+                raise RuntimeError(error_msg)
+            if result.stdout.strip():
+                description = result.stdout.strip()
+                print(description)
+                # Save to cache file
+                with open(summary_path, 'w') as f:
+                    f.write(description + '\n')
+            else:
+                raise RuntimeError(f"LLM command returned no output for {dirname}")
         else:
             print("*No description available.*")
 
