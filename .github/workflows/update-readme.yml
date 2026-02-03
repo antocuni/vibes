@@ -80,6 +80,13 @@ jobs:
             git rm -rf .
           fi
 
+          # Preserve PR preview directories if they exist
+          PREVIEW_BACKUP=""
+          if [ -d "_preview" ]; then
+            PREVIEW_BACKUP=$(mktemp -d)
+            cp -r _preview "$PREVIEW_BACKUP/_preview"
+          fi
+
           # Remove all existing content
           git rm -rf . 2>/dev/null || true
           rm -rf * .nojekyll 2>/dev/null || true
@@ -87,6 +94,12 @@ jobs:
           # Copy new site content
           cp -r "$DEPLOY_DIR"/* .
           cp "$DEPLOY_DIR"/.nojekyll . 2>/dev/null || true
+
+          # Restore PR preview directories
+          if [ -n "$PREVIEW_BACKUP" ] && [ -d "$PREVIEW_BACKUP/_preview" ]; then
+            cp -r "$PREVIEW_BACKUP/_preview" .
+            rm -rf "$PREVIEW_BACKUP"
+          fi
 
           # Commit and push
           git add -A
