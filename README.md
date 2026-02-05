@@ -104,7 +104,7 @@ if subdirs_with_dates:
                     print("*No description available.*")
         elif readme_path.exists():
             # Generate new summary using llm command
-            prompt = """Summarize this project concisely. Write just 1 paragraph (3-5 sentences) followed by an optional short bullet list if there are key findings or features. Vary your opening - don't start with "This project" or "This explores". Include 1-2 links to key tools/projects if relevant. Be specific but brief. No emoji."""
+            prompt = """Summarize this project in 2-3 lines maximum. Be specific and concise - no bullet lists, no links, no emoji. Just a brief plain-text description of what the project is and does."""
             result = subprocess.run(
                 ['llm', '-m', MODEL, '-s', prompt],
                 stdin=open(readme_path),
@@ -136,27 +136,11 @@ else:
 
 ### [system-environment-report](https://github.com/antocuni/vibes/tree/main/system-environment-report) (2026-02-05)
 
-Anthropic's Claude Code Remote environment operates as a secure, containerized Linux (Ubuntu 24.04 LTS) sandbox using Google's [gVisor](https://gvisor.dev/) for kernel-level isolation. It provides strong compute resources (16-core CPU with modern SIMD/AI extensions, 21 GB RAM), a network-limited proxy for package/code hosting, and a broad suite of pre-installed development tools and languages (Python, Node.js, Go, Rust, Java, and more). The system mounts a network-rooted 9p filesystem, enforces limits on open files and stack size, disables direct internet and Docker/POD access, and runs as root within the sandbox, balancing usability for coding with robust security boundaries. This setup enables advanced, reproducible code execution while safeguarding against risky operations and network exposure.
-
-Key features/highlights:
-- Linux (Ubuntu 24.04 LTS), run via gVisor (`runsc`) user-space kernel, root filesystem over [9p protocol](https://en.wikipedia.org/wiki/9P_(protocol)).
-- 16 physical CPU cores, AVX-512/AMX acceleration, 21 GB RAM, and 30 GB ephemeral disk.
-- Pre-installed: Python 3.11, Node.js 22, Go 1.24, Rust 1.93, Java 21, Ruby, PHP, Perl, Bun, plus major build tools/package managers.
-- No direct internet access; network requests routed through an authenticated proxy (whitelist includes popular package/code hosts).
-- Cgroups for resource isolation, root user/context, and enforced ulimit (20,000 open files, 8 MB stack).
-
-For more details or full documentation, see [Claude Code](https://claude.ai/code) and [gVisor](https://gvisor.dev/).
+An exploration of Anthropic's Claude Code Remote environment: a gVisor-sandboxed Ubuntu 24.04 container with 16 CPU cores, 21 GB RAM, and pre-installed dev tools (Python, Node.js, Go, Rust, Java), with network access restricted through an authenticated proxy.
 
 ### [snake-game](https://github.com/antocuni/vibes/tree/main/snake-game) (2026-02-02)
 
-A fully-functional Snake game was developed using only HTML, CSS, and vanilla JavaScript, showcasing how modern browser APIs like [`<canvas>`](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API) and `localStorage` can deliver a polished, responsive gaming experience without any frameworks. The game features smooth canvas rendering on a 20x20 grid, custom keyboard controls, and visual enhancements such as rounded segments and glowing effects, all fully client-side. The implementation emphasizes clean collision detection, game speed scaling for a natural difficulty curve, and persistent high scores for replayability.
-
-**Key Features:**
-- Canvas-rendered board with visual polish (glowing food, rounded snake)
-- Configurable, smooth tick-based game loop using `requestAnimationFrame`
-- Persistent high score via `localStorage`
-- Fast, responsive controls with anti-reversal logic
-- No dependencies or build steps; play immediately in any browser
+A browser-based Snake game built with vanilla HTML, CSS, and JavaScript using canvas rendering. Features localStorage high scores, smooth controls, and no dependencies.
 
 <!--[[[end]]]-->
 
@@ -184,7 +168,7 @@ The script automatically:
 - Gets the first commit date for each folder and sorts by most recent first
 - For each folder, checks if a `_summary.md` file exists
 - If the summary exists, it uses the cached version
-- If not, it generates a new summary using `llm -m github/gpt-4.1` with a prompt that creates engaging descriptions with bullets and links
+- If not, it generates a new summary using `llm -m github/gpt-4.1` with a prompt that creates short 2-3 line descriptions
 - Creates markdown links to each project folder on GitHub
 - New summaries are saved to `_summary.md` to avoid regenerating them on every run
 

@@ -88,7 +88,7 @@ A GitHub Actions workflow automatically:
 - Generates or uses cached summaries using the `llm` CLI tool
 - Updates the main README.md with a sorted project list (most recent first)
 
-Each project can optionally include a `_summary.md` file to cache its summary and avoid regeneration.
+Each project can optionally include a `_summary.md` file to cache its summary and avoid regeneration. **Summaries must be very short: 2-3 lines maximum, plain text, no bullet lists, no links, no emoji.** Just a brief description of what the project is and does.
 
 You don't need to manually update the main README.md - just ensure each project has a good README.md in its directory.
 
