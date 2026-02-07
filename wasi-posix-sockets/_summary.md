@@ -1,0 +1,1 @@
+POSIX socket functions exposed as WASM imports, with a Python/wasmtime host providing real socket implementations. Includes HTTP client, echo server, and a libcurl-compatible API demo, all running as WASM modules with networking delegated to the host.
