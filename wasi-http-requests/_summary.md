@@ -1,0 +1,1 @@
+Working examples of making HTTP GET and POST requests from C compiled to WASI, run with wasmtime. Uses wasi:http component model with wit-bindgen C bindings, since libcurl and POSIX sockets cannot yet be compiled to WASI.
