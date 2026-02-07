@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 2 projects
+## 3 projects
+
+### [wasi-http-requests](https://github.com/antocuni/vibes/tree/main/wasi-http-requests) (2026-02-07)
+
+Working examples of making HTTP GET and POST requests from C compiled to WASI, run with wasmtime. Uses wasi:http component model with wit-bindgen C bindings, since libcurl and POSIX sockets cannot yet be compiled to WASI.
 
 ### [system-environment-report](https://github.com/antocuni/vibes/tree/main/system-environment-report) (2026-02-05)
 
