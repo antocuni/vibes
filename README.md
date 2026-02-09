@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 3 projects
+## 4 projects
+
+### [wasi-posix-sockets](https://github.com/antocuni/vibes/tree/main/wasi-posix-sockets) (2026-02-07)
+
+POSIX socket functions exposed as WASM imports, with a Python/wasmtime host providing real socket implementations. Includes HTTP client, echo server, and a libcurl-compatible API demo, all running as WASM modules with networking delegated to the host.
 
 ### [wasi-http-requests](https://github.com/antocuni/vibes/tree/main/wasi-http-requests) (2026-02-07)
 
