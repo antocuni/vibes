@@ -12,7 +12,8 @@ import android.net.Uri;
 
 public class AlarmReceiver extends BroadcastReceiver {
 
-    private static final String CHANNEL_ID = "reminders";
+    private static final String CHANNEL_ID = "reminders_v2";
+    private static final String OLD_CHANNEL_ID = "reminders";
 
     @Override
     public void onReceive(Context ctx, Intent intent) {
@@ -74,6 +75,9 @@ public class AlarmReceiver extends BroadcastReceiver {
     private void createChannel(Context ctx) {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
+
+        // Delete old channel that used alarm ringtone (looping sound)
+        nm.deleteNotificationChannel(OLD_CHANNEL_ID);
 
         Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         AudioAttributes audioAttr = new AudioAttributes.Builder()
