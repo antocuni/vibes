@@ -39,6 +39,15 @@ public class AlarmReceiver extends BroadcastReceiver {
         PendingIntent snoozePi = PendingIntent.getBroadcast(ctx, id * 100 + 2, snoozeIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
+        // Auto-snooze when notification is swiped away
+        Intent swipeSnoozeIntent = new Intent(ctx, NotificationActionReceiver.class);
+        swipeSnoozeIntent.setAction("SNOOZE");
+        swipeSnoozeIntent.putExtra("notification_id", id);
+        swipeSnoozeIntent.putExtra("reminder_id", id);
+        swipeSnoozeIntent.putExtra("reminder_name", name);
+        PendingIntent swipeSnoozePi = PendingIntent.getBroadcast(ctx, id * 100 + 4, swipeSnoozeIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+
         // Content intent - open the app
         Intent openIntent = new Intent(ctx, MainActivity.class);
         PendingIntent openPi = PendingIntent.getActivity(ctx, id * 100 + 3, openIntent,
@@ -51,6 +60,7 @@ public class AlarmReceiver extends BroadcastReceiver {
                 .setContentTitle(name)
                 .setContentText("Reminder triggered")
                 .setContentIntent(openPi)
+                .setDeleteIntent(swipeSnoozePi)
                 .setAutoCancel(true)
                 .setSound(notifSound)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPi)
