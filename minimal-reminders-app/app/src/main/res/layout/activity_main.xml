@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp">
+
+    <TextView
+        android:id="@+id/title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reminders"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:layout_alignParentTop="true"
+        android:paddingBottom="8dp" />
+
+    <ListView
+        android:id="@+id/list"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/title"
+        android:layout_above="@id/fab"
+        android:divider="@android:color/darker_gray"
+        android:dividerHeight="1dp" />
+
+    <TextView
+        android:id="@+id/empty"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@id/title"
+        android:layout_above="@id/fab"
+        android:gravity="center"
+        android:text="No reminders yet.\nTap + to add one."
+        android:textSize="16sp"
+        android:textColor="#888888" />
+
+    <Button
+        android:id="@+id/fab"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:text="+"
+        android:textSize="28sp"
+        android:textColor="#FFFFFF"
+        android:background="@drawable/circle_button" />
+</RelativeLayout>
