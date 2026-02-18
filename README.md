@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 4 projects
+## 5 projects
+
+### [android-reminders](https://github.com/antocuni/vibes/tree/main/android-reminders) (2026-02-18)
+
+Minimal Android reminders app built with zero frameworks — pure Java, bare SDK tools, ~29KB APK. Supports recurring alarms with day-of-week selection, notifications with dismiss/snooze, and persists across reboots.
 
 ### [wasi-posix-sockets](https://github.com/antocuni/vibes/tree/main/wasi-posix-sockets) (2026-02-07)
 
