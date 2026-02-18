@@ -1,0 +1,1 @@
+A minimal Android reminders app (21KB APK) built with pure Java and zero dependencies. Supports recurring reminders with day-of-week selection, notifications with dismiss/snooze actions, and survives device reboots.
