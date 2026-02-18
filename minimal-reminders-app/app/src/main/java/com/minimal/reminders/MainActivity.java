@@ -11,6 +11,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CompoundButton;
+import android.widget.ImageButton;
 import android.widget.ListView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -36,28 +37,6 @@ public class MainActivity extends Activity {
         reminders = store.loadAll();
         adapter = new ReminderAdapter();
         listView.setAdapter(adapter);
-
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            Reminder r = reminders.get(position);
-            Intent intent = new Intent(this, EditReminderActivity.class);
-            intent.putExtra("reminder_id", r.id);
-            startActivity(intent);
-        });
-
-        listView.setOnItemLongClickListener((parent, view, position, id) -> {
-            Reminder r = reminders.get(position);
-            new AlertDialog.Builder(this)
-                    .setTitle("Delete reminder?")
-                    .setMessage("Delete \"" + r.name + "\"?")
-                    .setPositiveButton("Delete", (d, w) -> {
-                        AlarmScheduler.cancel(this, r);
-                        store.delete(r.id);
-                        refreshList();
-                    })
-                    .setNegativeButton("Cancel", null)
-                    .show();
-            return true;
-        });
 
         findViewById(R.id.fab).setOnClickListener(v -> {
             Intent intent = new Intent(this, EditReminderActivity.class);
@@ -107,6 +86,8 @@ public class MainActivity extends Activity {
             TextView timeView = convertView.findViewById(R.id.item_time);
             TextView daysView = convertView.findViewById(R.id.item_days);
             Switch toggle = convertView.findViewById(R.id.item_toggle);
+            ImageButton editBtn = convertView.findViewById(R.id.btn_edit);
+            ImageButton deleteBtn = convertView.findViewById(R.id.btn_delete);
 
             nameView.setText(r.name);
             timeView.setText(r.getTimeText());
@@ -122,6 +103,25 @@ public class MainActivity extends Activity {
                 } else {
                     AlarmScheduler.cancel(MainActivity.this, r);
                 }
+            });
+
+            editBtn.setOnClickListener(v -> {
+                Intent intent = new Intent(MainActivity.this, EditReminderActivity.class);
+                intent.putExtra("reminder_id", r.id);
+                startActivity(intent);
+            });
+
+            deleteBtn.setOnClickListener(v -> {
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Delete reminder?")
+                        .setMessage("Delete \"" + r.name + "\"?")
+                        .setPositiveButton("Delete", (d, w) -> {
+                            AlarmScheduler.cancel(MainActivity.this, r);
+                            store.delete(r.id);
+                            refreshList();
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
             });
 
             return convertView;

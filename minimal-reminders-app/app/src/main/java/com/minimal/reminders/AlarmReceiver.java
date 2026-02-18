@@ -43,10 +43,7 @@ public class AlarmReceiver extends BroadcastReceiver {
         PendingIntent openPi = PendingIntent.getActivity(ctx, id * 100 + 3, openIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
 
-        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
-        if (alarmSound == null) {
-            alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
-        }
+        Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
 
         android.app.Notification notification = new android.app.Notification.Builder(ctx, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
@@ -54,7 +51,7 @@ public class AlarmReceiver extends BroadcastReceiver {
                 .setContentText("Reminder triggered")
                 .setContentIntent(openPi)
                 .setAutoCancel(true)
-                .setSound(alarmSound)
+                .setSound(notifSound)
                 .addAction(android.R.drawable.ic_menu_close_clear_cancel, "Dismiss", dismissPi)
                 .addAction(android.R.drawable.ic_popup_reminder, "Snooze (10 min)", snoozePi)
                 .setPriority(android.app.Notification.PRIORITY_HIGH)
@@ -78,16 +75,16 @@ public class AlarmReceiver extends BroadcastReceiver {
         NotificationManager nm = (NotificationManager) ctx.getSystemService(Context.NOTIFICATION_SERVICE);
         if (nm == null) return;
 
-        Uri alarmSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM);
+        Uri notifSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION);
         AudioAttributes audioAttr = new AudioAttributes.Builder()
-                .setUsage(AudioAttributes.USAGE_ALARM)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
                 .build();
 
         NotificationChannel channel = new NotificationChannel(CHANNEL_ID, "Reminders",
                 NotificationManager.IMPORTANCE_HIGH);
         channel.setDescription("Reminder notifications");
-        channel.setSound(alarmSound, audioAttr);
+        channel.setSound(notifSound, audioAttr);
         channel.enableVibration(true);
         nm.createNotificationChannel(channel);
     }
