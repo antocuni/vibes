@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>struct-value-comparison</title>
+    <style>:root {
+    --color-bg: #ffffff;
+    --color-text: #24292f;
+    --color-link: #0969da;
+    --color-border: #d0d7de;
+    --color-code-bg: #f6f8fa;
+    --color-header-bg: #f6f8fa;
+    --color-app-btn: #2da44e;
+    --color-app-btn-hover: #218838;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--color-text);
+    background: var(--color-bg);
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+nav {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+}
+
+nav a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+article h1 { font-size: 2rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; }
+article h2 { font-size: 1.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; margin-top: 1.5em; }
+article h3 { font-size: 1.25rem; margin-top: 1.5em; }
+
+a { color: var(--color-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+    background: var(--color-code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+pre {
+    background: var(--color-code-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.85em;
+}
+
+ul, ol { padding-left: 2em; }
+li { margin: 0.25em 0; }
+
+hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 2rem 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid var(--color-border);
+    padding: 0.5em 1em;
+    text-align: left;
+}
+
+th {
+    background: var(--color-header-bg);
+}
+
+.app-link {
+    display: inline-block;
+    margin: 1rem 0;
+    padding: 0.6rem 1.2rem;
+    background: var(--color-app-btn);
+    color: #fff;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+.app-link:hover {
+    background: var(--color-app-btn-hover);
+    text-decoration: none;
+}
+
+.project-list a {
+    font-weight: 600;
+}
+
+footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    color: #656d76;
+}
+</style>
+    
+</head>
+<body>
+    <div class="container">
+        <nav><a href="../">← Back to all projects</a></nav>
+        <article>
+<h1 id="comparing-structs-by-value-in-c">Comparing Structs by Value in C</h1>
+<p>An exploration of different strategies for comparing C structs by value (field
+equality), and how GCC 13.3 and Clang 18.1 optimize each one at <code>-O3</code> on
+x86-64 Linux (System V ABI).</p>
+<h2 id="the-structs-under-test">The structs under test</h2>
+<pre class="highlight"><code class="language-c">struct Point {          // 8 bytes, no padding, fits in one register
+    int x;
+    int y;
+};
+
+struct Large {          // 48 bytes, no padding, passed on the stack
+    long a, b, c, d, e, f;
+};
+
+struct Padding {        // 8 bytes, 3 bytes of padding between c and x
+    char c;             // offset 0, size 1
+    /* 3 bytes padding */
+    int x;              // offset 4, size 4
+};
+</code></pre>
+
+<p>On x86-64 SysV ABI:</p>
+<ul>
+<li><code>Point</code> and <code>Padding</code> are 8 bytes and fit in a single 64-bit register
+  (<code>rdi</code>/<code>rsi</code>) when passed by value.</li>
+<li><code>Large</code> is 48 bytes and gets passed on the stack.</li>
+</ul>
+<h2 id="comparison-strategies">Comparison strategies</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Strategy</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Field-by-field</strong></td>
+<td><code>a.x == b.x &amp;&amp; a.y == b.y</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>memcmp (by value)</strong></td>
+<td><code>memcmp(&amp;a, &amp;b, sizeof(...))</code> on stack copies</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>memcmp (by pointer)</strong></td>
+<td><code>memcmp(a, b, sizeof(...))</code> on original objects</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>Integer cast</strong></td>
+<td><code>memcpy</code> into <code>uint64_t</code>, compare (small structs only)</td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>XOR accumulate</strong></td>
+<td>Cast to <code>uint64_t*</code>, XOR all words, check == 0</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong><code>__builtin_memcmp</code></strong></td>
+<td>Compiler builtin, same semantics as memcmp</td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Field-by-field (ptr)</strong></td>
+<td><code>a-&gt;x == b-&gt;x &amp;&amp; a-&gt;y == b-&gt;y</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="results-generated-assembly">Results: generated assembly</h2>
+<h3 id="struct-point-8-bytes-no-padding">struct Point (8 bytes, no padding)</h3>
+<p>Since Point fits in one register, the compiler receives both structs packed
+into <code>rdi</code> and <code>rsi</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>GCC 13.3</th>
+<th>Clang 18.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field-by-field</td>
+<td><code>cmp edi, esi</code> + branch + <code>sar rdi,32; sar rsi,32; cmp edi,esi</code> (5 insns)</td>
+<td><strong><code>cmp rdi, rsi; sete al</code></strong> (2 insns!)</td>
+</tr>
+<tr>
+<td>memcmp</td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+</tr>
+<tr>
+<td>Integer cast</td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+</tr>
+<tr>
+<td><code>__builtin_memcmp</code></td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+<td><code>cmp rdi, rsi; sete al</code> (2 insns)</td>
+</tr>
+<tr>
+<td>Field-by-field (ptr)</td>
+<td>Load + cmp x, branch, load + cmp y (6 insns)</td>
+<td>Load + cmp x, branch, load + cmp y (6 insns)</td>
+</tr>
+<tr>
+<td>memcmp (ptr)</td>
+<td>Load 8 bytes from each, single cmp (3 insns)</td>
+<td>Load 8 bytes from each, single cmp (3 insns)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key finding:</strong> For Point by value, GCC generates <em>worse</em> code for
+field-by-field than for memcmp. GCC keeps the short-circuit <code>&amp;&amp;</code> semantics
+literally — it compares the low 32 bits, branches, then extracts and compares
+the high 32 bits. Meanwhile, memcmp on 8 bytes is recognized as a single
+64-bit compare.</p>
+<p>Clang is smarter: it sees through the field-by-field <code>&amp;&amp;</code> chain and recognizes
+that since Point has no padding, comparing both fields is equivalent to a
+single 64-bit register compare. All strategies collapse to the same 2
+instructions.</p>
+<h3 id="struct-large-48-bytes-no-padding">struct Large (48 bytes, no padding)</h3>
+<p>Large is passed on the stack. Both copies live at known offsets from <code>rsp</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>GCC 13.3</th>
+<th>Clang 18.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field-by-field</td>
+<td>Sequential cmp + branch chain (6 pairs)</td>
+<td><strong><code>call memcmp@PLT</code></strong> (!!)</td>
+</tr>
+<tr>
+<td>memcmp</td>
+<td>Inline XOR pairs with early-exit (grouped 2-at-a-time)</td>
+<td><code>call bcmp@PLT</code></td>
+</tr>
+<tr>
+<td>XOR accumulate</td>
+<td>Inline XOR chain, fully branchless, single result</td>
+<td>Inline XOR chain, fully branchless</td>
+</tr>
+<tr>
+<td><code>__builtin_memcmp</code></td>
+<td>Same as memcmp (inline XOR pairs)</td>
+<td><code>call bcmp@PLT</code></td>
+</tr>
+<tr>
+<td>Field-by-field (ptr)</td>
+<td>Sequential cmp + branch chain (6 pairs)</td>
+<td>Sequential cmp + branch chain (6 pairs)</td>
+</tr>
+<tr>
+<td>memcmp (ptr)</td>
+<td>Inline XOR pairs with early-exit</td>
+<td><code>call bcmp@PLT</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key finding:</strong> Clang recognizes the field-by-field comparison of Large and
+<em>replaces it with a <code>memcmp</code> call</em>. This is a remarkable optimization —
+Clang proves to itself that because Large has no padding, comparing all 6
+fields with <code>&amp;&amp;</code> is equivalent to <code>memcmp</code>, and delegates to a library
+function that may use SIMD internally.</p>
+<p>GCC inlines the memcmp into XOR-pair comparisons with early-exit branches
+(checking 2 qwords at a time, bailing out as soon as a mismatch is found).
+This is a reasonable approach that avoids the function call overhead.</p>
+<p>The explicit XOR-accumulate strategy produces fully branchless code on both
+compilers — all 6 XOR results are OR'd together into a single register, then
+tested once. This trades off the possibility of early-exit for eliminating
+branch misprediction entirely.</p>
+<h3 id="struct-padding-8-bytes-with-3-padding-bytes">struct Padding (8 bytes, with 3 padding bytes)</h3>
+<p>Like Point, Padding fits in a single register. But it has 3 bytes of padding
+between <code>c</code> (offset 0) and <code>x</code> (offset 4).</p>
+<table>
+<thead>
+<tr>
+<th>Strategy</th>
+<th>GCC 13.3</th>
+<th>Clang 18.1</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Field-by-field</td>
+<td><code>cmp dil, sil</code> + branch + <code>sar rdi,32; sar rsi,32; cmp</code></td>
+<td><strong>XOR + mask <code>0xFFFFFFFF000000FF</code></strong> (branchless!)</td>
+</tr>
+<tr>
+<td>memcmp</td>
+<td><code>cmp rdi, rsi</code> (WRONG — compares padding!)</td>
+<td><code>cmp rdi, rsi</code> (WRONG — compares padding!)</td>
+</tr>
+<tr>
+<td><code>__builtin_memcmp</code></td>
+<td><code>cmp rdi, rsi</code> (WRONG — compares padding!)</td>
+<td><code>cmp rdi, rsi</code> (WRONG — compares padding!)</td>
+</tr>
+<tr>
+<td>Field-by-field (ptr)</td>
+<td>Load byte + cmp, branch, load int + cmp</td>
+<td>Load byte + cmp, branch, load int + cmp</td>
+</tr>
+<tr>
+<td>memcmp (ptr)</td>
+<td>Load 8 bytes, single cmp (WRONG)</td>
+<td>Load 8 bytes, single cmp (WRONG)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key finding:</strong> Clang generates a beautiful branchless comparison for
+<code>padding_eq_fields</code>:</p>
+<pre class="highlight"><code class="language-asm">padding_eq_fields:
+    xor     rdi, rsi              ; XOR the two registers
+    movabs  rax, 0xFFFFFFFF000000FF  ; mask: bits for c (byte 0) and x (bytes 4-7)
+    test    rdi, rax              ; test only the field bits, ignore padding
+    sete    al                    ; equal if all tested bits are zero
+    ret
+</code></pre>
+
+<p>The mask <code>0xFFFFFFFF000000FF</code> selects exactly the bits that correspond to
+actual fields:</p>
+<pre class="highlight"><code>Byte 0   (char c):  0xFF         ← selected
+Bytes 1-3 (padding): 0x000000    ← masked out
+Bytes 4-7 (int x):  0xFFFFFFFF   ← selected
+</code></pre>
+
+<p>This is correct, branchless, and only 4 instructions. Clang figured out which
+bits are padding and generated a mask to ignore them.</p>
+<p>GCC takes the literal approach: compare the low byte (char), branch, shift
+right 32 to extract the int, compare. Correct but involves a branch.</p>
+<h2 id="the-padding-trap">The padding trap</h2>
+<p><strong><code>memcmp</code> and <code>__builtin_memcmp</code> are WRONG for structs with padding</strong> unless
+you can guarantee all padding bytes are identical (e.g., via <code>memset(&amp;s, 0, sizeof(s))</code>
+before initialization).</p>
+<p>Our correctness test confirms this:</p>
+<pre class="highlight"><code>Test: structs with same fields but different padding bytes
+  field-by-field: EQUAL
+  memcmp:         NOT EQUAL     ← WRONG
+
+Test: zero-initialized structs with same fields
+  field-by-field: EQUAL
+  memcmp:         EQUAL         ← only correct by luck (padding is zeroed)
+</code></pre>
+
+<p>Both GCC and Clang optimize <code>memcmp</code> on Padding to a single <code>cmp rdi, rsi</code>,
+which compares all 8 bytes including the 3 padding bytes. If those padding
+bytes differ (which is legal — C makes no guarantees about padding contents),
+the comparison gives a false negative.</p>
+<h2 id="summary-table">Summary table</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Field-by-field</th>
+<th>memcmp</th>
+<th>XOR accumulate</th>
+<th>Integer cast</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Correct with padding?</strong></td>
+<td>Yes</td>
+<td><strong>NO</strong></td>
+<td><strong>NO</strong></td>
+<td><strong>NO</strong></td>
+</tr>
+<tr>
+<td><strong>Branchless?</strong></td>
+<td>GCC: No, Clang: Yes (small)</td>
+<td>Yes</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td><strong>Point (GCC)</strong></td>
+<td>5 insns</td>
+<td>2 insns</td>
+<td>—</td>
+<td>2 insns</td>
+</tr>
+<tr>
+<td><strong>Point (Clang)</strong></td>
+<td>2 insns</td>
+<td>2 insns</td>
+<td>—</td>
+<td>2 insns</td>
+</tr>
+<tr>
+<td><strong>Large (GCC)</strong></td>
+<td>17 insns</td>
+<td>~20 insns (inline)</td>
+<td>~16 insns</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Large (Clang)</strong></td>
+<td><code>call memcmp</code></td>
+<td><code>call bcmp</code></td>
+<td>~16 insns</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Padding (GCC)</strong></td>
+<td>5 insns</td>
+<td>2 insns (WRONG)</td>
+<td>—</td>
+<td>—</td>
+</tr>
+<tr>
+<td><strong>Padding (Clang)</strong></td>
+<td>4 insns (masked!)</td>
+<td>2 insns (WRONG)</td>
+<td>—</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h2 id="recommendations">Recommendations</h2>
+<ol>
+<li>
+<p><strong>For correctness: always use field-by-field comparison.</strong> It is the only
+   strategy that reliably ignores padding bytes. With Clang, you pay no
+   performance penalty — it optimizes field-by-field into the best possible
+   code, even generating padding-aware bit masks.</p>
+</li>
+<li>
+<p><strong><code>memcmp</code> is only safe when you can prove there is no padding</strong> (e.g.,
+   <code>struct Point</code> with two <code>int</code>s, no gaps). For such types, <code>memcmp</code> produces
+   optimal code on both compilers.</p>
+</li>
+<li>
+<p><strong>If you control initialization and always zero the struct first</strong>
+   (<code>memset</code> or <code>= {0}</code>), then <code>memcmp</code> works in practice, but this is
+   fragile — any code path that skips the zeroing breaks the comparison
+   silently.</p>
+</li>
+<li>
+<p><strong>Clang generally produces better code than GCC for struct comparisons.</strong>
+   Clang's optimizer recognizes field-by-field patterns and emits tight,
+   often branchless code. GCC tends to follow the short-circuit <code>&amp;&amp;</code> literally,
+   producing more branches.</p>
+</li>
+<li>
+<p><strong>The explicit XOR-accumulate pattern</strong> is useful when you want guaranteed
+   branchless comparison of large structs and can prove there's no padding.
+   Both compilers generate good code for it.</p>
+</li>
+</ol>
+<h2 id="files-in-this-project">Files in this project</h2>
+<ul>
+<li><code>compare.c</code> — All comparison strategies for all three structs</li>
+<li><code>compare_gcc.s</code> — GCC 13.3 <code>-O3</code> assembly output</li>
+<li><code>compare_clang.s</code> — Clang 18.1 <code>-O3</code> assembly output</li>
+<li><code>test_correctness.c</code> — Demonstrates the padding/memcmp correctness problem</li>
+</ul>
+        </article>
+        <footer>
+            Built automatically from project README files.
+        </footer>
+    </div>
+</body>
+</html>
