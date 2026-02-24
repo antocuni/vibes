@@ -1,0 +1,1 @@
+Exploration of C struct comparison strategies (field-by-field, memcmp, XOR, integer cast) and how GCC and Clang optimize them at -O3. Demonstrates that memcmp is incorrect for structs with padding, and that Clang generates remarkably clever code including padding-aware bit masks for field comparisons.
