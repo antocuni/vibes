@@ -708,6 +708,130 @@ this.</strong></p>
 <li><code>compare_clang.s</code> — Clang 18.1 <code>-O3</code> assembly output</li>
 <li><code>test_correctness.c</code> — Demonstrates the padding/memcmp correctness problem (8-byte and 16-byte)</li>
 </ul>
+<h2 id="further-reading">Further reading</h2>
+<p>Resources on struct comparison, padding, and how compilers/languages deal with
+this problem.</p>
+<h3 id="the-padding-problem">The padding problem</h3>
+<ul>
+<li>
+<p><a href="https://wiki.sei.cmu.edu/confluence/display/c/EXP42-C.+Do+not+compare+padding+data">EXP42-C. Do not compare padding data</a>
+  — SEI CERT C Coding Standard. The authoritative secure coding guideline:
+  "padding values are unspecified, attempting a byte-by-byte comparison between
+  structures can lead to incorrect results." Provides compliant and
+  non-compliant examples.</p>
+</li>
+<li>
+<p><a href="https://interrupt.memfault.com/blog/c-struct-padding-initialization">C Structure Padding Initialization</a>
+  — Memfault/Interrupt blog. Deep dive into when padding is zeroed (static
+  storage) vs not (automatic storage), C23's <code>= {}</code> change, GCC 12's
+  <code>-ftrivial-auto-var-init</code>, <code>-Wpadded</code>, and strategies for safe struct
+  comparison.</p>
+</li>
+<li>
+<p><a href="https://research.nccgroup.com/2019/10/30/padding-the-struct-how-a-compiler-optimization-can-disclose-stack-memory/">Padding the struct: How a compiler optimization can disclose stack memory</a>
+  — NCC Group Research. Security angle: compiler optimizations on struct
+  assignment can leak uninitialized padding bytes to userspace, demonstrated
+  in real kernel drivers.</p>
+</li>
+<li>
+<p><a href="http://www.catb.org/esr/structure-packing/">The Lost Art of Structure Packing</a>
+  — Eric S. Raymond. The classic guide to understanding alignment, padding,
+  and how to reorder struct members to minimize wasted space. Essential
+  background for anyone working with struct layouts.</p>
+</li>
+</ul>
+<h3 id="optimizing-struct-equality-in-practice">Optimizing struct equality in practice</h3>
+<ul>
+<li>
+<p><a href="https://nextmovesoftware.com/blog/2020/01/23/optimising-struct-equality-checks/">Optimising struct equality checks</a>
+  — NextMove Software blog. Shows how replacing field-by-field comparison
+  with <code>memcmp</code> on a padding-free struct dramatically reduces generated
+  instructions. Compares GCC, Clang, and ICC output. Key insight: compilers
+  struggle to auto-merge field comparisons into wider loads, so <code>memcmp</code> on
+  known-no-padding structs is a practical manual optimization.</p>
+</li>
+<li>
+<p><a href="https://llvm.org/doxygen/MergeICmps_8cpp_source.html">LLVM MergeICmps pass</a>
+  — LLVM source code. This pass transforms chains of field-by-field integer
+  comparisons on contiguous memory into a single <code>memcmp</code> call, which is
+  then expanded by ExpandMemCmp into optimal hardware comparisons. This is
+  why Clang can turn <code>a.a == b.a &amp;&amp; a.b == b.b &amp;&amp; ...</code> into <code>memcmp</code> for
+  large structs.</p>
+</li>
+<li>
+<p><a href="https://www.mail-archive.com/gcc@gcc.gnu.org/msg105652.html">GCC mailing list: Help with comparison-merging optimization pass</a>
+  — Discussion of bringing LLVM's MergeICmps optimization to GCC. Covers
+  challenges with nested struct comparisons, array comparisons, and safety
+  concerns with flexible array members. GCC doesn't yet have this pass,
+  which explains why GCC's field-by-field codegen is often worse than Clang's.</p>
+</li>
+</ul>
+<h3 id="how-other-languages-handle-struct-equality">How other languages handle struct equality</h3>
+<ul>
+<li>
+<p><a href="https://dave.cheney.net/2020/05/09/ensmallening-go-binaries-by-prohibiting-comparisons">Ensmallening Go binaries by prohibiting comparisons</a>
+  — Dave Cheney. Explains how Go's <code>==</code> operator on structs works: the
+  compiler generates per-type equality functions that compare fields while
+  skipping padding. If a struct has no padding, the compiler may use
+  <code>memcmp</code> directly. Also covers the trick of adding <code>[0]func()</code> fields to
+  prevent comparison and shrink binaries.</p>
+</li>
+<li>
+<p><a href="https://github.com/rust-lang/rust/issues/140167">Rust #140167: Bad codegen for comparing struct of two 16-bit ints</a>
+  — Rust/LLVM bug (April 2025). <code>derive(PartialEq)</code> on <code>struct { u16, u16 }</code>
+  generates four separate loads + XOR + OR instead of a single 32-bit
+  compare. Root cause: LLVM doesn't merge the short-circuit <code>&amp;&amp;</code> pattern
+  into a wider load. Using bitwise <code>&amp;</code> instead of <code>&amp;&amp;</code> produces optimal code.
+  Directly relevant to our findings about GCC's literal <code>&amp;&amp;</code> codegen.</p>
+</li>
+<li>
+<p><a href="https://github.com/microsoft/windows-rs/issues/2229">windows-rs #2229: PartialEq with memcmp shouldn't compare padding</a>
+  — Real-world bug in Microsoft's Rust Windows bindings. The code generator
+  emitted <code>memcmp</code>-based <code>PartialEq</code> for structs with padding, causing
+  equality checks to fail on logically equal values. Fixed by switching to
+  field-by-field comparison.</p>
+</li>
+<li>
+<p><a href="https://github.com/nim-lang/Nim/issues/6676">Nim: Generate default <code>==</code> for object variants (#6676)</a>
+  — Nim compiles to C and generates field-by-field equality via its <code>fields</code>
+  iterator. This issue tracks limitations with object variants (tagged
+  unions), where the default <code>==</code> doesn't work due to iterator limitations.</p>
+</li>
+</ul>
+<h3 id="c-approaches-and-proposals">C++ approaches and proposals</h3>
+<ul>
+<li>
+<p><a href="http://en.cppreference.com/w/cpp/language/default_comparisons.html">C++20 Default comparisons</a>
+  — cppreference. C++20's <code>= default</code> for <code>operator==</code> performs memberwise
+  comparison, safely ignoring padding. This is the approach C lacks due to
+  having no operator overloading.</p>
+</li>
+<li>
+<p><a href="https://brevzin.github.io/c++/2019/07/28/comparisons-cpp20/">Comparisons in C++20</a>
+  — Barry Revzin's comprehensive blog post on C++20's comparison framework,
+  including the spaceship operator and defaulted equality.</p>
+</li>
+<li>
+<p><a href="https://quuxplusone.github.io/blog/2018/03/19/p0732r0-and-trivially-comparable/">P0732R0 and "trivially comparable"</a>
+  — Arthur O'Dwyer. Discusses the C++ proposal for class types as template
+  parameters, and the critical distinction between "trivially comparable"
+  (memcmp-safe, no padding) and "strong structural equality" (memberwise,
+  padding-safe). The proposal initially "forgot about padding bytes."</p>
+</li>
+<li>
+<p><a href="https://quuxplusone.github.io/blog/2018/06/08/no-padding-bits/"><code>has_no_padding_bits</code></a>
+  — Arthur O'Dwyer. Argues for a C++ type trait to detect padding, motivated
+  by <code>std::atomic::compare_exchange</code> which uses <code>memcmp</code> internally and
+  silently breaks on structs with padding. The same problem we demonstrate
+  with our correctness tests.</p>
+</li>
+<li>
+<p><a href="https://isocpp.org/blog/2016/02/a-bit-of-background-for-the-default-comparison-proposal-bjarne-stroustrup">Bjarne Stroustrup: Background for the default comparison proposal</a>
+  — Historical context: Stroustrup asked Ritchie why C had <code>=</code> but not <code>==</code>
+  for structs. Answer: until 1978 C didn't even have struct assignment, and
+  comparison couldn't be done efficiently with memcmp due to padding holes.</p>
+</li>
+</ul>
         </article>
         <footer>
             Built automatically from project README files.
