@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 5 projects
+## 6 projects
+
+### [struct-value-comparison](https://github.com/antocuni/vibes/tree/main/struct-value-comparison) (2026-02-24)
+
+Exploration of C struct comparison strategies (field-by-field, memcmp, XOR, integer cast) and how GCC and Clang optimize them at -O3. Demonstrates that memcmp is incorrect for structs with padding, and that Clang generates remarkably clever code including padding-aware bit masks for field comparisons.
 
 ### [minimal-reminders-app](https://github.com/antocuni/vibes/tree/main/minimal-reminders-app) (2026-02-18)
 
