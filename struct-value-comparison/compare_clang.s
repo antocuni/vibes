@@ -318,6 +318,216 @@ padding_eq_fields_ptr:                  # @padding_eq_fields_ptr
 	.size	padding_eq_fields_ptr, .Lfunc_end16-padding_eq_fields_ptr
 	.cfi_endproc
                                         # -- End function
+	.globl	twolong_eq_fields               # -- Begin function twolong_eq_fields
+	.p2align	4, 0x90
+	.type	twolong_eq_fields,@function
+twolong_eq_fields:                      # @twolong_eq_fields
+	.cfi_startproc
+# %bb.0:
+	xor	rdi, rdx
+	xor	rsi, rcx
+	or	rsi, rdi
+	sete	al
+	ret
+.Lfunc_end17:
+	.size	twolong_eq_fields, .Lfunc_end17-twolong_eq_fields
+	.cfi_endproc
+                                        # -- End function
+	.globl	twolong_eq_memcmp               # -- Begin function twolong_eq_memcmp
+	.p2align	4, 0x90
+	.type	twolong_eq_memcmp,@function
+twolong_eq_memcmp:                      # @twolong_eq_memcmp
+	.cfi_startproc
+# %bb.0:
+	mov	qword ptr [rsp - 16], rdi
+	mov	qword ptr [rsp - 8], rsi
+	mov	qword ptr [rsp - 32], rdx
+	mov	qword ptr [rsp - 24], rcx
+	movdqu	xmm0, xmmword ptr [rsp - 16]
+	movdqu	xmm1, xmmword ptr [rsp - 32]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end18:
+	.size	twolong_eq_memcmp, .Lfunc_end18-twolong_eq_memcmp
+	.cfi_endproc
+                                        # -- End function
+	.globl	twolong_eq_memcmp_ptr           # -- Begin function twolong_eq_memcmp_ptr
+	.p2align	4, 0x90
+	.type	twolong_eq_memcmp_ptr,@function
+twolong_eq_memcmp_ptr:                  # @twolong_eq_memcmp_ptr
+	.cfi_startproc
+# %bb.0:
+	movdqu	xmm0, xmmword ptr [rdi]
+	movdqu	xmm1, xmmword ptr [rsi]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end19:
+	.size	twolong_eq_memcmp_ptr, .Lfunc_end19-twolong_eq_memcmp_ptr
+	.cfi_endproc
+                                        # -- End function
+	.globl	twolong_eq_builtin              # -- Begin function twolong_eq_builtin
+	.p2align	4, 0x90
+	.type	twolong_eq_builtin,@function
+twolong_eq_builtin:                     # @twolong_eq_builtin
+	.cfi_startproc
+# %bb.0:
+	mov	qword ptr [rsp - 16], rdi
+	mov	qword ptr [rsp - 8], rsi
+	mov	qword ptr [rsp - 32], rdx
+	mov	qword ptr [rsp - 24], rcx
+	movdqu	xmm0, xmmword ptr [rsp - 16]
+	movdqu	xmm1, xmmword ptr [rsp - 32]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end20:
+	.size	twolong_eq_builtin, .Lfunc_end20-twolong_eq_builtin
+	.cfi_endproc
+                                        # -- End function
+	.globl	twolong_eq_fields_ptr           # -- Begin function twolong_eq_fields_ptr
+	.p2align	4, 0x90
+	.type	twolong_eq_fields_ptr,@function
+twolong_eq_fields_ptr:                  # @twolong_eq_fields_ptr
+	.cfi_startproc
+# %bb.0:
+	mov	rax, qword ptr [rdi]
+	cmp	rax, qword ptr [rsi]
+	jne	.LBB21_1
+# %bb.2:
+	mov	rax, qword ptr [rdi + 8]
+	cmp	rax, qword ptr [rsi + 8]
+	sete	al
+                                        # kill: def $al killed $al killed $eax
+	ret
+.LBB21_1:
+	xor	eax, eax
+                                        # kill: def $al killed $al killed $eax
+	ret
+.Lfunc_end21:
+	.size	twolong_eq_fields_ptr, .Lfunc_end21-twolong_eq_fields_ptr
+	.cfi_endproc
+                                        # -- End function
+	.globl	twolong_eq_intcast              # -- Begin function twolong_eq_intcast
+	.p2align	4, 0x90
+	.type	twolong_eq_intcast,@function
+twolong_eq_intcast:                     # @twolong_eq_intcast
+	.cfi_startproc
+# %bb.0:
+	xor	rdi, rdx
+	xor	rsi, rcx
+	or	rsi, rdi
+	sete	al
+	ret
+.Lfunc_end22:
+	.size	twolong_eq_intcast, .Lfunc_end22-twolong_eq_intcast
+	.cfi_endproc
+                                        # -- End function
+	.globl	padded16_eq_fields              # -- Begin function padded16_eq_fields
+	.p2align	4, 0x90
+	.type	padded16_eq_fields,@function
+padded16_eq_fields:                     # @padded16_eq_fields
+	.cfi_startproc
+# %bb.0:
+	cmp	dil, dl
+	sete	dl
+	cmp	rsi, rcx
+	sete	al
+	and	al, dl
+	ret
+.Lfunc_end23:
+	.size	padded16_eq_fields, .Lfunc_end23-padded16_eq_fields
+	.cfi_endproc
+                                        # -- End function
+	.globl	padded16_eq_memcmp              # -- Begin function padded16_eq_memcmp
+	.p2align	4, 0x90
+	.type	padded16_eq_memcmp,@function
+padded16_eq_memcmp:                     # @padded16_eq_memcmp
+	.cfi_startproc
+# %bb.0:
+	mov	byte ptr [rsp - 16], dil
+	mov	qword ptr [rsp - 8], rsi
+	mov	byte ptr [rsp - 32], dl
+	mov	qword ptr [rsp - 24], rcx
+	movdqu	xmm0, xmmword ptr [rsp - 16]
+	movdqu	xmm1, xmmword ptr [rsp - 32]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end24:
+	.size	padded16_eq_memcmp, .Lfunc_end24-padded16_eq_memcmp
+	.cfi_endproc
+                                        # -- End function
+	.globl	padded16_eq_memcmp_ptr          # -- Begin function padded16_eq_memcmp_ptr
+	.p2align	4, 0x90
+	.type	padded16_eq_memcmp_ptr,@function
+padded16_eq_memcmp_ptr:                 # @padded16_eq_memcmp_ptr
+	.cfi_startproc
+# %bb.0:
+	movdqu	xmm0, xmmword ptr [rdi]
+	movdqu	xmm1, xmmword ptr [rsi]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end25:
+	.size	padded16_eq_memcmp_ptr, .Lfunc_end25-padded16_eq_memcmp_ptr
+	.cfi_endproc
+                                        # -- End function
+	.globl	padded16_eq_builtin             # -- Begin function padded16_eq_builtin
+	.p2align	4, 0x90
+	.type	padded16_eq_builtin,@function
+padded16_eq_builtin:                    # @padded16_eq_builtin
+	.cfi_startproc
+# %bb.0:
+	mov	byte ptr [rsp - 16], dil
+	mov	qword ptr [rsp - 8], rsi
+	mov	byte ptr [rsp - 32], dl
+	mov	qword ptr [rsp - 24], rcx
+	movdqu	xmm0, xmmword ptr [rsp - 16]
+	movdqu	xmm1, xmmword ptr [rsp - 32]
+	pcmpeqb	xmm1, xmm0
+	pmovmskb	eax, xmm1
+	cmp	eax, 65535
+	sete	al
+	ret
+.Lfunc_end26:
+	.size	padded16_eq_builtin, .Lfunc_end26-padded16_eq_builtin
+	.cfi_endproc
+                                        # -- End function
+	.globl	padded16_eq_fields_ptr          # -- Begin function padded16_eq_fields_ptr
+	.p2align	4, 0x90
+	.type	padded16_eq_fields_ptr,@function
+padded16_eq_fields_ptr:                 # @padded16_eq_fields_ptr
+	.cfi_startproc
+# %bb.0:
+	movzx	eax, byte ptr [rdi]
+	cmp	al, byte ptr [rsi]
+	jne	.LBB27_1
+# %bb.2:
+	mov	rax, qword ptr [rdi + 8]
+	cmp	rax, qword ptr [rsi + 8]
+	sete	al
+                                        # kill: def $al killed $al killed $eax
+	ret
+.LBB27_1:
+	xor	eax, eax
+                                        # kill: def $al killed $al killed $eax
+	ret
+.Lfunc_end27:
+	.size	padded16_eq_fields_ptr, .Lfunc_end27-padded16_eq_fields_ptr
+	.cfi_endproc
+                                        # -- End function
 	.ident	"Ubuntu clang version 18.1.3 (1ubuntu1)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig

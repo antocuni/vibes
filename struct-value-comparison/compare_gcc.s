@@ -202,7 +202,7 @@ large_eq_memcmp_ptr:
 	.globl	padding_eq_memcmp_ptr
 	.type	padding_eq_memcmp_ptr, @function
 padding_eq_memcmp_ptr:
-.LFB32:
+.LFB43:
 	.cfi_startproc
 	endbr64
 	mov	rax, QWORD PTR [rdi]
@@ -210,7 +210,7 @@ padding_eq_memcmp_ptr:
 	sete	al
 	ret
 	.cfi_endproc
-.LFE32:
+.LFE43:
 	.size	padding_eq_memcmp_ptr, .-padding_eq_memcmp_ptr
 	.p2align 4
 	.globl	point_eq_intcast
@@ -400,6 +400,216 @@ padding_eq_fields_ptr:
 	.cfi_endproc
 .LFE30:
 	.size	padding_eq_fields_ptr, .-padding_eq_fields_ptr
+	.p2align 4
+	.globl	twolong_eq_fields
+	.type	twolong_eq_fields, @function
+twolong_eq_fields:
+.LFB31:
+	.cfi_startproc
+	endbr64
+	xor	eax, eax
+	cmp	rdi, rdx
+	je	.L57
+	ret
+	.p2align 4,,10
+	.p2align 3
+.L57:
+	cmp	rsi, rcx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE31:
+	.size	twolong_eq_fields, .-twolong_eq_fields
+	.p2align 4
+	.globl	twolong_eq_memcmp
+	.type	twolong_eq_memcmp, @function
+twolong_eq_memcmp:
+.LFB32:
+	.cfi_startproc
+	endbr64
+	xor	rdx, rdi
+	xor	rcx, rsi
+	mov	QWORD PTR -24[rsp], rdi
+	or	rdx, rcx
+	mov	QWORD PTR -16[rsp], rsi
+	sete	al
+	ret
+	.cfi_endproc
+.LFE32:
+	.size	twolong_eq_memcmp, .-twolong_eq_memcmp
+	.p2align 4
+	.globl	twolong_eq_memcmp_ptr
+	.type	twolong_eq_memcmp_ptr, @function
+twolong_eq_memcmp_ptr:
+.LFB33:
+	.cfi_startproc
+	endbr64
+	mov	rax, QWORD PTR [rdi]
+	mov	rdx, QWORD PTR 8[rdi]
+	xor	rax, QWORD PTR [rsi]
+	xor	rdx, QWORD PTR 8[rsi]
+	or	rax, rdx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE33:
+	.size	twolong_eq_memcmp_ptr, .-twolong_eq_memcmp_ptr
+	.p2align 4
+	.globl	twolong_eq_builtin
+	.type	twolong_eq_builtin, @function
+twolong_eq_builtin:
+.LFB34:
+	.cfi_startproc
+	endbr64
+	xor	rdx, rdi
+	xor	rcx, rsi
+	mov	QWORD PTR -24[rsp], rdi
+	or	rdx, rcx
+	mov	QWORD PTR -16[rsp], rsi
+	sete	al
+	ret
+	.cfi_endproc
+.LFE34:
+	.size	twolong_eq_builtin, .-twolong_eq_builtin
+	.p2align 4
+	.globl	twolong_eq_fields_ptr
+	.type	twolong_eq_fields_ptr, @function
+twolong_eq_fields_ptr:
+.LFB35:
+	.cfi_startproc
+	endbr64
+	mov	rdx, QWORD PTR [rsi]
+	xor	eax, eax
+	cmp	QWORD PTR [rdi], rdx
+	je	.L70
+	ret
+	.p2align 4,,10
+	.p2align 3
+.L70:
+	mov	rax, QWORD PTR 8[rsi]
+	cmp	QWORD PTR 8[rdi], rax
+	sete	al
+	ret
+	.cfi_endproc
+.LFE35:
+	.size	twolong_eq_fields_ptr, .-twolong_eq_fields_ptr
+	.p2align 4
+	.globl	twolong_eq_intcast
+	.type	twolong_eq_intcast, @function
+twolong_eq_intcast:
+.LFB36:
+	.cfi_startproc
+	endbr64
+	cmp	rdi, rdx
+	sete	al
+	cmp	rsi, rcx
+	sete	dl
+	and	eax, edx
+	ret
+	.cfi_endproc
+.LFE36:
+	.size	twolong_eq_intcast, .-twolong_eq_intcast
+	.p2align 4
+	.globl	padded16_eq_fields
+	.type	padded16_eq_fields, @function
+padded16_eq_fields:
+.LFB37:
+	.cfi_startproc
+	endbr64
+	xor	eax, eax
+	cmp	dil, dl
+	je	.L75
+	ret
+	.p2align 4,,10
+	.p2align 3
+.L75:
+	cmp	rsi, rcx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE37:
+	.size	padded16_eq_fields, .-padded16_eq_fields
+	.p2align 4
+	.globl	padded16_eq_memcmp
+	.type	padded16_eq_memcmp, @function
+padded16_eq_memcmp:
+.LFB38:
+	.cfi_startproc
+	endbr64
+	mov	rax, rdi
+	mov	QWORD PTR -40[rsp], rdx
+	xor	rax, rdx
+	mov	rdx, rsi
+	mov	QWORD PTR -24[rsp], rdi
+	xor	rdx, rcx
+	mov	QWORD PTR -16[rsp], rsi
+	or	rax, rdx
+	mov	QWORD PTR -32[rsp], rcx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE38:
+	.size	padded16_eq_memcmp, .-padded16_eq_memcmp
+	.p2align 4
+	.globl	padded16_eq_memcmp_ptr
+	.type	padded16_eq_memcmp_ptr, @function
+padded16_eq_memcmp_ptr:
+.LFB45:
+	.cfi_startproc
+	endbr64
+	mov	rax, QWORD PTR [rdi]
+	mov	rdx, QWORD PTR 8[rdi]
+	xor	rax, QWORD PTR [rsi]
+	xor	rdx, QWORD PTR 8[rsi]
+	or	rax, rdx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE45:
+	.size	padded16_eq_memcmp_ptr, .-padded16_eq_memcmp_ptr
+	.p2align 4
+	.globl	padded16_eq_builtin
+	.type	padded16_eq_builtin, @function
+padded16_eq_builtin:
+.LFB40:
+	.cfi_startproc
+	endbr64
+	mov	rax, rdi
+	mov	QWORD PTR -40[rsp], rdx
+	xor	rax, rdx
+	mov	rdx, rsi
+	mov	QWORD PTR -24[rsp], rdi
+	xor	rdx, rcx
+	mov	QWORD PTR -16[rsp], rsi
+	or	rax, rdx
+	mov	QWORD PTR -32[rsp], rcx
+	sete	al
+	ret
+	.cfi_endproc
+.LFE40:
+	.size	padded16_eq_builtin, .-padded16_eq_builtin
+	.p2align 4
+	.globl	padded16_eq_fields_ptr
+	.type	padded16_eq_fields_ptr, @function
+padded16_eq_fields_ptr:
+.LFB41:
+	.cfi_startproc
+	endbr64
+	movzx	edx, BYTE PTR [rsi]
+	xor	eax, eax
+	cmp	BYTE PTR [rdi], dl
+	je	.L88
+	ret
+	.p2align 4,,10
+	.p2align 3
+.L88:
+	mov	rax, QWORD PTR 8[rsi]
+	cmp	QWORD PTR 8[rdi], rax
+	sete	al
+	ret
+	.cfi_endproc
+.LFE41:
+	.size	padded16_eq_fields_ptr, .-padded16_eq_fields_ptr
 	.ident	"GCC: (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0"
 	.section	.note.GNU-stack,"",@progbits
 	.section	.note.gnu.property,"a"

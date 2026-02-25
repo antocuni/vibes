@@ -23,6 +23,16 @@ struct Padding {
     int x;
 };
 
+struct TwoLong {        /* 16 bytes, no padding, passed in 2 registers */
+    long a;
+    long b;
+};
+
+struct Padded16 {       /* 16 bytes, 7 bytes padding between c and x */
+    char c;
+    long x;
+};
+
 /* ── Strategy 1: field-by-field comparison ─────────────────────────── */
 
 bool point_eq_fields(struct Point a, struct Point b) {
@@ -118,5 +128,59 @@ bool large_eq_fields_ptr(const struct Large *a, const struct Large *b) {
 }
 
 bool padding_eq_fields_ptr(const struct Padding *a, const struct Padding *b) {
+    return a->c == b->c && a->x == b->x;
+}
+
+/* ── TwoLong: 16 bytes, no padding, 2-register passing ────────────── */
+
+bool twolong_eq_fields(struct TwoLong a, struct TwoLong b) {
+    return a.a == b.a && a.b == b.b;
+}
+
+bool twolong_eq_memcmp(struct TwoLong a, struct TwoLong b) {
+    return memcmp(&a, &b, sizeof(struct TwoLong)) == 0;
+}
+
+bool twolong_eq_memcmp_ptr(const struct TwoLong *a, const struct TwoLong *b) {
+    return memcmp(a, b, sizeof(struct TwoLong)) == 0;
+}
+
+bool twolong_eq_builtin(struct TwoLong a, struct TwoLong b) {
+    return __builtin_memcmp(&a, &b, sizeof(struct TwoLong)) == 0;
+}
+
+bool twolong_eq_fields_ptr(const struct TwoLong *a, const struct TwoLong *b) {
+    return a->a == b->a && a->b == b->b;
+}
+
+bool twolong_eq_intcast(struct TwoLong a, struct TwoLong b) {
+    /* 16 bytes = two uint64_t, can do XOR-based comparison */
+    uint64_t va1, va2, vb1, vb2;
+    memcpy(&va1, &a, 8);
+    memcpy(&va2, (char *)&a + 8, 8);
+    memcpy(&vb1, &b, 8);
+    memcpy(&vb2, (char *)&b + 8, 8);
+    return (va1 == vb1) & (va2 == vb2);
+}
+
+/* ── Padded16: 16 bytes, 7 bytes padding, 2-register passing ──────── */
+
+bool padded16_eq_fields(struct Padded16 a, struct Padded16 b) {
+    return a.c == b.c && a.x == b.x;
+}
+
+bool padded16_eq_memcmp(struct Padded16 a, struct Padded16 b) {
+    return memcmp(&a, &b, sizeof(struct Padded16)) == 0;
+}
+
+bool padded16_eq_memcmp_ptr(const struct Padded16 *a, const struct Padded16 *b) {
+    return memcmp(a, b, sizeof(struct Padded16)) == 0;
+}
+
+bool padded16_eq_builtin(struct Padded16 a, struct Padded16 b) {
+    return __builtin_memcmp(&a, &b, sizeof(struct Padded16)) == 0;
+}
+
+bool padded16_eq_fields_ptr(const struct Padded16 *a, const struct Padded16 *b) {
     return a->c == b->c && a->x == b->x;
 }

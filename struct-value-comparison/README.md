@@ -21,12 +21,25 @@ struct Padding {        // 8 bytes, 3 bytes of padding between c and x
     /* 3 bytes padding */
     int x;              // offset 4, size 4
 };
+
+struct TwoLong {        // 16 bytes, no padding, passed in two registers
+    long a;
+    long b;
+};
+
+struct Padded16 {       // 16 bytes, 7 bytes of padding between c and x
+    char c;             // offset 0, size 1
+    /* 7 bytes padding */
+    long x;             // offset 8, size 8
+};
 ```
 
 On x86-64 SysV ABI:
 
 - `Point` and `Padding` are 8 bytes and fit in a single 64-bit register
   (`rdi`/`rsi`) when passed by value.
+- `TwoLong` and `Padded16` are 16 bytes and are passed in **two registers**
+  (`rdi`+`rsi` for the first struct, `rdx`+`rcx` for the second).
 - `Large` is 48 bytes and gets passed on the stack.
 
 ## Comparison strategies
@@ -96,6 +109,69 @@ compilers — all 6 XOR results are OR'd together into a single register, then
 tested once. This trades off the possibility of early-exit for eliminating
 branch misprediction entirely.
 
+### struct TwoLong (16 bytes, no padding)
+
+TwoLong is 16 bytes and passed in two registers: `rdi`=a.a, `rsi`=a.b,
+`rdx`=b.a, `rcx`=b.b. This is the critical size boundary where the struct
+no longer fits in a single register.
+
+| Strategy | GCC 13.3 | Clang 18.1 |
+|----------|----------|------------|
+| Field-by-field | `cmp rdi, rdx` + branch + `cmp rsi, rcx` (4 insns, branching) | **`xor rdi,rdx; xor rsi,rcx; or; sete`** (4 insns, branchless!) |
+| memcmp | XOR pairs: `xor rdx,rdi; xor rcx,rsi; or; sete` (4 insns, branchless) + dead stores | **SSE: `pcmpeqb + pmovmskb`** (8 insns, register spill to XMM!) |
+| Integer cast | `cmp rdi,rdx; sete; cmp rsi,rcx; sete; and` (5 insns, branchless) | XOR+OR (4 insns, branchless, same as field-by-field) |
+| `__builtin_memcmp` | Same as memcmp (XOR pairs) | Same as memcmp (SSE) |
+| Field-by-field (ptr) | Load + cmp + branch x2 (6 insns) | Load + cmp + branch x2 (6 insns) |
+| memcmp (ptr) | XOR pairs from memory (7 insns, branchless) | **SSE: `movdqu` x2 + `pcmpeqb + pmovmskb`** (6 insns, branchless) |
+
+**Key finding:** The 16-byte size brings out a fascinating divergence between
+the compilers:
+
+- **Clang's field-by-field is optimal.** It generates the same 4-instruction
+  XOR+OR pattern regardless of whether you write `a.a == b.a && a.b == b.b` or
+  use `memcpy`-based integer comparison. Clang sees through the `&&` and fuses
+  the two comparisons.
+
+- **Clang uses SSE for memcmp at 16 bytes!** For `memcmp`, Clang spills the
+  registers to the stack, loads them into XMM registers with `movdqu`, then uses
+  `pcmpeqb` + `pmovmskb` to compare all 16 bytes at once. This is actually
+  *slower* than the field-by-field approach (8 instructions vs 4) because of
+  the register→stack→XMM round-trip. The SSE path makes sense for
+  pointer-based memcmp (data is already in memory) but is wasteful when the
+  values are already in GPRs.
+
+- **GCC uses XOR+OR for memcmp**, avoiding SSE entirely. This is the same
+  pattern as field-by-field but branchless. However, for field-by-field itself,
+  GCC stubbornly preserves the short-circuit branch.
+
+### struct Padded16 (16 bytes, with 7 padding bytes)
+
+Like TwoLong, Padded16 is 16 bytes and passed in two registers. But it has 7
+bytes of padding: `rdi` holds `c` (low byte) + 7 padding bytes, `rsi` holds
+`x` (full 8-byte long).
+
+| Strategy | GCC 13.3 | Clang 18.1 |
+|----------|----------|------------|
+| Field-by-field | `cmp dil, dl` + branch + `cmp rsi, rcx` (5 insns, branching) | **`cmp dil,dl; sete; cmp rsi,rcx; sete; and`** (5 insns, branchless!) |
+| memcmp | XOR full registers + OR (WRONG — compares padding!) | **SSE: pcmpeqb + pmovmskb** (WRONG — compares padding!) |
+| `__builtin_memcmp` | Same as memcmp (WRONG) | Same as memcmp (WRONG) |
+| Field-by-field (ptr) | Load byte + cmp + branch + load long + cmp (6 insns) | Load byte + cmp + branch + load long + cmp (6 insns) |
+| memcmp (ptr) | XOR pairs from memory (WRONG) | SSE from memory (WRONG) |
+
+**Key finding:** The 16-byte padded struct reveals a crucial difference from
+the 8-byte `Padding`:
+
+- **No masking trick.** With 8-byte `Padding`, Clang generated a brilliant
+  XOR + mask (`0xFFFFFFFF000000FF`) to ignore padding within a single register.
+  But with `Padded16`, the two fields live in *separate registers* (`rdi` for
+  `char c`, `rsi` for `long x`). There's no single mask that can span two
+  registers, so Clang falls back to comparing each field independently with
+  two `sete` + `and`. Still branchless, still correct, but the mask trick
+  only works within a single register.
+
+- **GCC still branches** on the `&&`, comparing `dil` vs `dl` first, branching,
+  then comparing `rsi` vs `rcx`.
+
 ### struct Padding (8 bytes, with 3 padding bytes)
 
 Like Point, Padding fits in a single register. But it has 3 bytes of padding
@@ -142,6 +218,8 @@ right 32 to extract the int, compare. Correct but involves a branch.
 you can guarantee all padding bytes are identical (e.g., via `memset(&s, 0, sizeof(s))`
 before initialization).
 
+### 8-byte Padding struct
+
 Our correctness test confirms this:
 
 ```
@@ -159,6 +237,36 @@ which compares all 8 bytes including the 3 padding bytes. If those padding
 bytes differ (which is legal — C makes no guarantees about padding contents),
 the comparison gives a false negative.
 
+### 16-byte Padded16 struct — zero-init is NOT enough with GCC!
+
+The 16-byte case reveals a more insidious problem:
+
+```
+GCC output:
+  Test: zero-initialized structs with same fields
+    field-by-field: EQUAL
+    memcmp:         NOT EQUAL     ← WRONG even with zero-init!
+
+Clang output:
+  Test: zero-initialized structs with same fields
+    field-by-field: EQUAL
+    memcmp:         EQUAL         ← happens to work
+```
+
+**With GCC, even zero-initializing the struct doesn't save you.** When GCC
+passes the 16-byte `Padded16` by value, it loads the `char c` field into the
+low byte of `rdi`. But the upper 7 bytes of `rdi` (which correspond to padding)
+may contain garbage from the register's prior contents — GCC doesn't
+necessarily clear them, even if the struct was zero-initialized in memory. When
+`memcmp` then compares these registers, it sees the garbage padding bytes and
+reports inequality.
+
+Clang happens to get this right (it clears or preserves the zero padding when
+loading into registers), but this is an ABI/optimizer detail you should never
+rely on. **The C standard explicitly states that writing to a struct member can
+leave padding bytes with unspecified values, and compilers are free to exploit
+this.**
+
 ## Summary table
 
 | Aspect | Field-by-field | memcmp | XOR accumulate | Integer cast |
@@ -167,10 +275,14 @@ the comparison gives a false negative.
 | **Branchless?** | GCC: No, Clang: Yes (small) | Yes | Yes | Yes |
 | **Point (GCC)** | 5 insns | 2 insns | — | 2 insns |
 | **Point (Clang)** | 2 insns | 2 insns | — | 2 insns |
+| **TwoLong (GCC)** | 4 insns (branch) | 4 insns (XOR+OR) | — | 5 insns |
+| **TwoLong (Clang)** | 4 insns (XOR+OR!) | 8 insns (SSE!) | — | 4 insns |
 | **Large (GCC)** | 17 insns | ~20 insns (inline) | ~16 insns | — |
 | **Large (Clang)** | `call memcmp` | `call bcmp` | ~16 insns | — |
 | **Padding (GCC)** | 5 insns | 2 insns (WRONG) | — | — |
 | **Padding (Clang)** | 4 insns (masked!) | 2 insns (WRONG) | — | — |
+| **Padded16 (GCC)** | 5 insns (branch) | ~6 insns (WRONG) | — | — |
+| **Padded16 (Clang)** | 5 insns (branchless) | ~8 insns SSE (WRONG) | — | — |
 
 ## Recommendations
 
@@ -183,10 +295,11 @@ the comparison gives a false negative.
    `struct Point` with two `int`s, no gaps). For such types, `memcmp` produces
    optimal code on both compilers.
 
-3. **If you control initialization and always zero the struct first**
-   (`memset` or `= {0}`), then `memcmp` works in practice, but this is
-   fragile — any code path that skips the zeroing breaks the comparison
-   silently.
+3. **Zero-initializing structs does NOT guarantee memcmp safety.** Our tests
+   show that GCC may not preserve zero padding in registers when passing
+   16-byte structs by value. Even with `= {0}` initialization, `memcmp` can
+   give false negatives. This makes the zero-init workaround even more fragile
+   than commonly believed.
 
 4. **Clang generally produces better code than GCC for struct comparisons.**
    Clang's optimizer recognizes field-by-field patterns and emits tight,
@@ -197,9 +310,16 @@ the comparison gives a false negative.
    branchless comparison of large structs and can prove there's no padding.
    Both compilers generate good code for it.
 
+6. **At 16 bytes, Clang's memcmp uses SSE (pcmpeqb) instead of scalar ops.**
+   When the struct is already in GPRs (passed by value), this is worse than
+   field-by-field because it requires spilling registers to the stack for
+   XMM load. For pointer-based memcmp where data is in memory, the SSE
+   approach is reasonable. Field-by-field comparison avoids this overhead
+   entirely.
+
 ## Files in this project
 
-- `compare.c` — All comparison strategies for all three structs
+- `compare.c` — All comparison strategies for all five struct types
 - `compare_gcc.s` — GCC 13.3 `-O3` assembly output
 - `compare_clang.s` — Clang 18.1 `-O3` assembly output
-- `test_correctness.c` — Demonstrates the padding/memcmp correctness problem
+- `test_correctness.c` — Demonstrates the padding/memcmp correctness problem (8-byte and 16-byte)
