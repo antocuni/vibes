@@ -1,0 +1,1 @@
+Comparative analysis of standard I/O library architectures across 9 languages (Python 3, Python 2, C, C++, Rust, Go, Zig, C#, Java). Covers abstraction layers, buffering strategies, text encoding, and standard stream handling, from raw syscalls up through user-facing APIs.
