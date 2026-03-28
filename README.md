@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 6 projects
+## 7 projects
+
+### [io-abstraction-layers](https://github.com/antocuni/vibes/tree/main/io-abstraction-layers) (2026-03-28)
+
+Comparative analysis of standard I/O library architectures across 9 languages (Python 3, Python 2, C, C++, Rust, Go, Zig, C#, Java). Covers abstraction layers, buffering strategies, text encoding, and standard stream handling, from raw syscalls up through user-facing APIs.
 
 ### [struct-value-comparison](https://github.com/antocuni/vibes/tree/main/struct-value-comparison) (2026-02-24)
 
