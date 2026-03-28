@@ -1,0 +1,1 @@
+This project implements a Python-style layered I/O stack in C, supporting raw syscalls, efficient buffered reads/writes with zero-copy peek/consume APIs, and text I/O features like universal newline handling and UTF-8 encoding. It provides GC-managed UTF-8 string objects, enabling high-performance file and socket operations close to Python's `io` module.

@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 7 projects
+## 8 projects
+
+### [c-io-tower](https://github.com/antocuni/vibes/tree/main/c-io-tower) (2026-03-28)
+
+This project implements a Python-style layered I/O stack in C, supporting raw syscalls, efficient buffered reads/writes with zero-copy peek/consume APIs, and text I/O features like universal newline handling and UTF-8 encoding. It provides GC-managed UTF-8 string objects, enabling high-performance file and socket operations close to Python's `io` module.
 
 ### [io-abstraction-layers](https://github.com/antocuni/vibes/tree/main/io-abstraction-layers) (2026-03-28)
 
