@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>print-investigation</title>
+    <style>:root {
+    --color-bg: #ffffff;
+    --color-text: #24292f;
+    --color-link: #0969da;
+    --color-border: #d0d7de;
+    --color-code-bg: #f6f8fa;
+    --color-header-bg: #f6f8fa;
+    --color-app-btn: #2da44e;
+    --color-app-btn-hover: #218838;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Noto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--color-text);
+    background: var(--color-bg);
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+nav {
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-border);
+    font-size: 0.9rem;
+}
+
+nav a {
+    color: var(--color-link);
+    text-decoration: none;
+}
+
+nav a:hover {
+    text-decoration: underline;
+}
+
+article h1 { font-size: 2rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; }
+article h2 { font-size: 1.5rem; border-bottom: 1px solid var(--color-border); padding-bottom: 0.3em; margin-top: 1.5em; }
+article h3 { font-size: 1.25rem; margin-top: 1.5em; }
+
+a { color: var(--color-link); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+code {
+    background: var(--color-code-bg);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+    font-size: 0.85em;
+    font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+pre {
+    background: var(--color-code-bg);
+    padding: 1rem;
+    border-radius: 6px;
+    overflow-x: auto;
+    line-height: 1.45;
+}
+
+pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    font-size: 0.85em;
+}
+
+ul, ol { padding-left: 2em; }
+li { margin: 0.25em 0; }
+
+hr {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    margin: 2rem 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    border: 1px solid var(--color-border);
+    padding: 0.5em 1em;
+    text-align: left;
+}
+
+th {
+    background: var(--color-header-bg);
+}
+
+.app-link {
+    display: inline-block;
+    margin: 1rem 0;
+    padding: 0.6rem 1.2rem;
+    background: var(--color-app-btn);
+    color: #fff;
+    border-radius: 6px;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: 1rem;
+}
+
+.app-link:hover {
+    background: var(--color-app-btn-hover);
+    text-decoration: none;
+}
+
+.project-list a {
+    font-weight: 600;
+}
+
+footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--color-border);
+    font-size: 0.8rem;
+    color: #656d76;
+}
+</style>
+    
+</head>
+<body>
+    <div class="container">
+        <nav><a href="../">← Back to all projects</a></nav>
+        <article>
+<h1 id="how-print-works-in-compiled-languages">How print() Works in Compiled Languages</h1>
+<p>A survey of print/format implementations across compiled languages, with an eye
+toward designing a Python-like <code>print()</code> for a compiled language (SPy).</p>
+<h2 id="overview">Overview</h2>
+<p>Python's <code>print()</code> is deceptively simple: it takes <code>*args</code> of any type,
+converts each to a string via <code>__str__</code>, joins them with spaces, and writes the
+result plus a newline to stdout. Replicating this in a compiled language
+requires solving several interrelated problems:</p>
+<ol>
+<li><strong>Accepting a variable number of arguments of different types</strong> -- without runtime overhead if possible</li>
+<li><strong>Converting each argument to a string</strong> -- via some trait/protocol/interface mechanism</li>
+<li><strong>Buffering and output</strong> -- build a string vs. write pieces directly</li>
+<li><strong>Type safety</strong> -- catch errors at compile time vs. runtime</li>
+<li><strong>Format strings</strong> (optional) -- parsed at compile time or runtime</li>
+</ol>
+<p>The languages below represent the main design strategies.</p>
+<hr />
+<h2 id="rust-compiler-intrinsic-macro-trait-dispatch">Rust: Compiler-Intrinsic Macro + Trait Dispatch</h2>
+<h3 id="mechanism">Mechanism</h3>
+<p><code>println!()</code> is a <strong>macro</strong> that expands through a chain:</p>
+<pre class="highlight"><code>println!(&quot;x={}, y={}&quot;, x, y)
+  -&gt; io::_print(format_args_nl!(&quot;x={}, y={}&quot;, x, y))
+     -&gt; stdout().write_fmt(args)
+</code></pre>
+
+<p><code>format_args!</code> is a <strong>compiler built-in</strong> (not a <code>macro_rules!</code> macro). It
+requires the format string to be a literal so the compiler can parse it at
+compile time.</p>
+<h3 id="what-format_args-produces">What format_args! produces</h3>
+<p>It emits a <code>fmt::Arguments&lt;'a&gt;</code> struct with three fields:</p>
+<ul>
+<li><strong><code>pieces: &amp;[&amp;'static str]</code></strong> -- the literal string fragments between
+  placeholders. For <code>"x={}, y={}"</code> this is <code>["x=", ", y=", ""]</code>.</li>
+<li><strong><code>args: &amp;[rt::Argument&lt;'a&gt;]</code></strong> -- type-erased arguments. Each entry is a
+  reference to the value plus a function pointer to the appropriate trait
+  method (e.g., <code>&lt;i32 as Display&gt;::fmt</code>). This is essentially a hand-built
+  vtable.</li>
+<li><strong><code>fmt: Option&lt;&amp;[rt::Placeholder]&gt;</code></strong> -- optional format specifiers (width,
+  precision, etc.). <code>None</code> when all placeholders use defaults.</li>
+</ul>
+<p>Everything lives on the stack. No heap allocation.</p>
+<h3 id="variable-arguments">Variable arguments</h3>
+<p>The compiler processes each argument at compile time and generates an
+<code>rt::Argument</code> pairing a value reference with a formatting function pointer.
+The variadic nature is fully resolved at compile time; at runtime, the
+formatting loop just calls through function pointers.</p>
+<h3 id="string-conversion-the-display-trait">String conversion: the Display trait</h3>
+<pre class="highlight"><code class="language-rust">impl fmt::Display for MyType {
+    fn fmt(&amp;self, f: &amp;mut fmt::Formatter&lt;'_&gt;) -&gt; fmt::Result {
+        write!(f, &quot;...&quot;)
+    }
+}
+</code></pre>
+
+<p>Each placeholder selects a trait: <code>{}</code> -&gt; Display, <code>{:?}</code> -&gt; Debug, <code>{:x}</code> -&gt;
+LowerHex, etc. Display cannot be <code>#[derive]</code>d -- the programmer must choose
+the human-readable representation explicitly.</p>
+<h3 id="output-strategy">Output strategy</h3>
+<p><strong>No temporary string.</strong> <code>fmt::write()</code> iterates over pieces and args, writing
+each directly to the output stream. Each argument's function pointer is called
+with a <code>Formatter</code> that writes into stdout's buffer. The only case where a
+String is built is <code>format!()</code>.</p>
+<h3 id="type-safety">Type safety</h3>
+<p>Fully checked at compile time. The compiler verifies: argument count matches
+placeholders, every argument implements the required trait, every argument is
+used. Zero runtime type checking.</p>
+<h3 id="buffering">Buffering</h3>
+<p>stdout is wrapped in <code>ReentrantLock&lt;LineWriter&lt;StdoutRaw&gt;&gt;</code>. Each <code>println!()</code>
+acquires the lock, writes through a line-buffered writer, and flushes on the
+trailing newline. Each call pays lock + flush cost. Workaround: acquire
+<code>stdout().lock()</code> once for multiple writes.</p>
+<h3 id="key-design-tradeoff">Key design tradeoff</h3>
+<p>The <code>fmt::Arguments</code> struct enables a <strong>non-generic <code>write_fmt</code> method</strong>,
+avoiding monomorphization bloat. The formatting loop is instantiated once and
+dispatches through function pointers. This trades a small runtime cost
+(indirect calls) for significantly smaller binaries compared to full
+monomorphization.</p>
+<hr />
+<h2 id="go-runtime-reflection-interface-boxing">Go: Runtime Reflection + Interface Boxing</h2>
+<h3 id="mechanism_1">Mechanism</h3>
+<p><code>fmt.Println</code> is a <strong>regular function</strong>:</p>
+<pre class="highlight"><code class="language-go">func Println(a ...any) (n int, err error)
+</code></pre>
+
+<p><code>...any</code> (alias for <code>...interface{}</code>) means the compiler packs all arguments
+into a <code>[]any</code> slice, boxing each value into an interface.</p>
+<h3 id="interface-boxing-at-machine-level">Interface boxing at machine level</h3>
+<p>Each <code>interface{}</code> is a 16-byte (on 64-bit) pair: a pointer to a
+compiler-generated <strong>type descriptor</strong> and either the value itself (if it fits
+in a word) or a pointer to heap-allocated data. The type descriptor contains
+method tables, size, alignment, and other metadata.</p>
+<h3 id="call-chain">Call chain</h3>
+<pre class="highlight"><code>Println(args...)
+  -&gt; Fprintln(os.Stdout, args...)
+     -&gt; pp = pool.Get()   // sync.Pool reuse
+     -&gt; pp.doPrintln()     // format into pp.buf
+     -&gt; os.Stdout.Write(pp.buf)
+     -&gt; pool.Put(pp)
+</code></pre>
+
+<p>A <code>pp</code> (printer) struct is obtained from a <code>sync.Pool</code> to avoid allocation.
+It contains an internal byte buffer and a pre-allocated 68-byte <code>intbuf</code> for
+integer formatting.</p>
+<h3 id="string-conversion">String conversion</h3>
+<p><code>printArg</code> uses a multi-level dispatch:</p>
+<ol>
+<li><strong>Fast-path type switch</strong> on concrete types: bool, all int/uint sizes,
+   float32/64, complex64/128, string, <code>[]byte</code>. These call specialized
+   formatters directly with no reflection.</li>
+<li><strong>Interface checks</strong> (in order): <code>fmt.Formatter</code>, <code>fmt.GoStringer</code>,
+   <code>error</code>, <code>fmt.Stringer</code>. If any match, the interface method is called.</li>
+<li><strong>Reflect fallback</strong> for structs, maps, slices, etc. -- inspects
+   <code>reflect.Kind</code> and formats generically.</li>
+</ol>
+<h3 id="output-strategy_1">Output strategy</h3>
+<p><strong>Builds a complete buffer, then writes in one call.</strong> The <code>pp.buf</code> is filled
+by <code>doPrintln()</code>, then written to <code>os.Stdout</code> via a single <code>Write([]byte)</code>.
+This means each <code>Println</code> call is atomic at the syscall level -- concurrent
+goroutines won't interleave within a single call.</p>
+<h3 id="type-safety_1">Type safety</h3>
+<p><strong>Runtime only.</strong> There is no compile-time checking of argument types. Any
+value can be passed. <code>go vet</code> checks <code>Printf</code> format strings, but <code>Println</code>
+has no format string to check. If a type doesn't implement <code>Stringer</code>, it falls
+through to reflection -- never panics, just produces a generic representation.</p>
+<h3 id="buffering_1">Buffering</h3>
+<p><code>os.Stdout</code> wraps fd 1 with an <code>fdMutex</code> for concurrent access. The mutex
+serializes <code>Write</code> calls, so concurrent goroutines produce non-interleaved
+lines (since each <code>Println</code> writes its entire buffer in one <code>Write</code>), but line
+ordering is non-deterministic.</p>
+<h3 id="key-design-tradeoff_1">Key design tradeoff</h3>
+<p>Maximum simplicity and flexibility at the cost of performance. Every argument
+is boxed (potential heap allocation), and non-builtin types go through
+reflection. The <code>sync.Pool</code> mitigates allocation cost. The interface-based
+approach means any type is printable without explicit opt-in, but there's no
+way to get compile-time errors for formatting issues.</p>
+<hr />
+<h2 id="modern-c-two-eras">Modern C++: Two Eras</h2>
+<h3 id="iostream-c98-operator-overloading">iostream (C++98): Operator Overloading</h3>
+<p><code>std::cout &lt;&lt; x &lt;&lt; y</code> chains <code>operator&lt;&lt;</code> calls. Each returns a reference to
+the same <code>ostream</code>, parsed as <code>(cout.operator&lt;&lt;(x)).operator&lt;&lt;(y)</code>.</p>
+<ul>
+<li><strong>User opt-in</strong>: free function <code>ostream&amp; operator&lt;&lt;(ostream&amp;, const T&amp;)</code>,
+  found via ADL.</li>
+<li><strong>Output</strong>: each <code>&lt;&lt;</code> writes immediately to the underlying <code>streambuf</code>. No
+  atomicity across a chained expression -- concurrent threads can interleave.</li>
+<li><strong>Code bloat</strong>: every unique chain generates distinct template instantiations.
+  Significant binary size overhead.</li>
+</ul>
+<h3 id="stdformat-c20-stdprint-c23-type-erased-templates">std::format (C++20) / std::print (C++23): Type-Erased Templates</h3>
+<pre class="highlight"><code class="language-cpp">template&lt;class... Args&gt;
+std::string format(std::format_string&lt;Args...&gt; fmt, Args&amp;&amp;... args);
+
+template&lt;class... Args&gt;
+void print(std::format_string&lt;Args...&gt; fmt, Args&amp;&amp;... args);
+</code></pre>
+
+<p>The critical design: the thin template layer immediately calls
+<code>std::make_format_args(args...)</code>, which <strong>type-erases</strong> all arguments into an
+array of tagged unions or function-pointer-based erasure objects. The actual
+formatting is done by a <strong>non-template</strong> function (<code>std::vformat</code> or
+<code>std::vprint_unicode</code>).</p>
+<h3 id="compile-time-format-string-validation">Compile-time format string validation</h3>
+<p><code>std::format_string</code> has a <strong><code>consteval</code> constructor</strong> that parses the format
+string and validates it against the <code>Args...</code> type pack during compilation. Wrong
+argument count, invalid specifiers, or type mismatches are compile-time errors.
+This gives printf convenience with full compile-time safety.</p>
+<p>For runtime format strings, C++26 adds <code>std::runtime_format()</code>.</p>
+<h3 id="user-opt-in">User opt-in</h3>
+<p>Specialize <code>std::formatter&lt;YourType&gt;</code> with:
+- <code>constexpr parse(parse_context&amp;)</code> -- reads format specifiers (enabling
+  compile-time validation even for user types)
+- <code>format(const T&amp;, format_context&amp;)</code> -- writes via <code>ctx.out()</code> iterator</p>
+<h3 id="output-strategy_2">Output strategy</h3>
+<p><code>std::print</code> builds a complete <code>std::string</code> via <code>vformat</code>, then writes it to
+<code>FILE*</code> (not <code>std::cout</code>) in a single call. This provides practical atomicity
+and avoids iostream's piece-by-piece problem.</p>
+<h3 id="code-bloat">Code bloat</h3>
+<p>The type-erasure approach means the heavy formatting machinery is instantiated
+<strong>once</strong>, regardless of how many different type combinations appear across the
+program. The {fmt} library (basis for <code>std::format</code>) compiles to roughly the
+same size as equivalent <code>printf</code>, while iostream is several times larger.</p>
+<h3 id="key-design-tradeoff_2">Key design tradeoff</h3>
+<p>C++23's <code>std::print</code> is the most direct analogue to Python's approach:
+compile-time safety via <code>consteval</code>, type-erasure to avoid bloat, single-write
+atomicity. The cost is one temporary string allocation per call.</p>
+<hr />
+<h2 id="zig-comptime-evaluation-monomorphization">Zig: Comptime Evaluation + Monomorphization</h2>
+<h3 id="mechanism_2">Mechanism</h3>
+<p><code>std.debug.print()</code> is a <strong>regular function</strong> (not a macro or built-in):</p>
+<pre class="highlight"><code class="language-zig">pub fn format(writer: anytype, comptime fmt: []const u8, args: anytype) !void
+</code></pre>
+
+<p>The <code>comptime</code> keyword forces the format string to be known at compile time.
+<code>anytype</code> uses Zig's compile-time duck typing, monomorphizing for each
+concrete (writer, args) combination.</p>
+<h3 id="variable-arguments-via-comptime-tuples">Variable arguments via comptime tuples</h3>
+<p>No variadic functions exist. Arguments are passed as an <strong>anonymous struct</strong>
+(tuple): <code>.{ x, y, z }</code>. The format function inspects this at comptime via
+<code>@typeInfo(T)</code> to get field count and types. A bitset (max 32 args) tracks
+consumption; unused arguments produce a compile error.</p>
+<h3 id="format-string-parsing">Format string parsing</h3>
+<p>Parsed <strong>entirely at comptime</strong> by a <code>Parser</code> struct using <code>inline for</code> loops
+that the compiler fully unrolls. At runtime, there is zero parsing overhead --
+the compiler has emitted a straight-line sequence of write calls.</p>
+<h3 id="type-dispatch-formattype">Type dispatch: formatType()</h3>
+<p>A comptime switch on <code>@typeInfo(T)</code>:</p>
+<ol>
+<li>Check for <code>pub fn format(self, comptime fmt, options, writer)</code> method -- if
+   present, call it directly (user opt-in).</li>
+<li>Primitives (int, float): dispatch to <code>formatValue()</code>.</li>
+<li>Dedicated handlers for enums, unions, structs, optionals, errors, pointers,
+   slices, arrays.</li>
+<li><code>max_depth</code> parameter prevents infinite recursion on self-referential types.</li>
+</ol>
+<p>All dispatch resolved at comptime -&gt; direct calls, no vtable, no type switch at
+runtime.</p>
+<h3 id="output-strategy_3">Output strategy</h3>
+<p><strong>Writes directly to the writer, one piece at a time.</strong> No intermediate string.
+Memory usage is constant regardless of output length. <code>std.debug.print()</code> uses
+a 64-byte stack buffer over stderr. File I/O uses <code>BufferedWriter</code> with a
+4096-byte buffer.</p>
+<h3 id="type-safety_2">Type safety</h3>
+<p>Everything checked at compile time: wrong argument count, unused arguments,
+type mismatches, malformed format strings.</p>
+<h3 id="key-design-tradeoff_3">Key design tradeoff</h3>
+<p>Zig achieves the same goals as Rust's macros but <strong>without macros</strong>: comptime
+execution of normal Zig code does the parsing, <code>@typeInfo</code> does the reflection,
+and <code>anytype</code> does the monomorphization. The generated code is fully
+transparent and debuggable. The cost is full monomorphization (every unique
+format call generates unique code), whereas Rust's <code>fmt::Arguments</code> avoids
+this.</p>
+<hr />
+<h2 id="swift-protocol-witnesses-existential-containers">Swift: Protocol Witnesses + Existential Containers</h2>
+<h3 id="mechanism_3">Mechanism</h3>
+<p><code>print()</code> is a <strong>regular library function</strong>:</p>
+<pre class="highlight"><code class="language-swift">func print(_ items: Any..., separator: String = &quot; &quot;, terminator: String = &quot;\n&quot;)
+</code></pre>
+
+<h3 id="variable-arguments_1">Variable arguments</h3>
+<p><code>Any...</code> packs arguments into an <code>[Any]</code> array. Each value is boxed into an
+<strong>existential container</strong> (3 words of inline storage + type metadata pointer +
+protocol witness table pointer). Values larger than 3 words are heap-allocated.</p>
+<h3 id="string-conversion_1">String conversion</h3>
+<p>Checks protocol conformance at runtime (in order):
+1. <code>CustomStringConvertible</code> -&gt; <code>.description</code> property
+2. <code>CustomDebugStringConvertible</code> -&gt; <code>.debugDescription</code>
+3. Fallback to <code>Mirror</code>-based reflection</p>
+<h3 id="output-strategy_4">Output strategy</h3>
+<p>Builds a <code>String</code> per argument via <code>String(describing:)</code>, then writes
+sequentially to a <code>TextOutputStream</code> (stdout by default).</p>
+<h3 id="type-safety_3">Type safety</h3>
+<p>Fully type-safe (no format strings to mismatch), but all dispatch is runtime.
+Worst case is unexpected string representation, never UB.</p>
+<hr />
+<h2 id="d-variadic-templates-sink-protocol">D: Variadic Templates + Sink Protocol</h2>
+<h3 id="mechanism_4">Mechanism</h3>
+<p><code>writeln</code> is a <strong>template function</strong>:</p>
+<pre class="highlight"><code class="language-d">void writeln(Args...)(Args args)
+</code></pre>
+
+<p>The compiler generates a specialized instantiation for each unique combination
+of argument types.</p>
+<h3 id="string-conversion_2">String conversion</h3>
+<p>Fast paths for builtins. For user types, D looks for <code>toString</code> -- either
+<code>string toString()</code> or the zero-allocation sink form:
+<code>void toString(scope void delegate(const(char)[]) sink)</code>. Falls back to
+compile-time reflection via <code>tupleof</code> for a default representation.</p>
+<h3 id="compile-time-format-checking">Compile-time format checking</h3>
+<p><code>writefln!"%d %s"(42, "hello")</code> validates the format string against argument
+types at compile time via template instantiation.</p>
+<h3 id="output-strategy_5">Output strategy</h3>
+<p>Sink-based: the delegate writes directly to the C <code>FILE*</code> buffer. With the
+sink form of <code>toString</code>, data flows from user type to stdio buffer with <strong>zero
+intermediate allocation</strong>.</p>
+<h3 id="key-design-tradeoff_4">Key design tradeoff</h3>
+<p>Maximum performance through compile-time specialization + the sink protocol
+avoids GC allocations (important since D has a GC). Cost is binary bloat from
+template instantiation.</p>
+<hr />
+<h2 id="nim-compiler-built-in-conversion-operator">Nim: Compiler Built-in + Conversion Operator</h2>
+<h3 id="mechanism_5">Mechanism</h3>
+<p><code>echo</code> is a <strong>compiler built-in</strong> declared as:</p>
+<pre class="highlight"><code class="language-nim">proc echo*(x: varargs[string, `$`])
+</code></pre>
+
+<p>The <code>varargs[string,</code>$<code>]</code> syntax means: accept variable arguments, applying
+the <code>$</code> operator (Nim's <code>__str__</code> equivalent) to each automatically.</p>
+<h3 id="string-conversion_3">String conversion</h3>
+<p>The compiler inserts a call to the appropriate <code>$</code> overload for each
+argument's type at compile time. User types define <code>proc</code>$<code>*(x: MyType): string</code>.</p>
+<h3 id="output-strategy_6">Output strategy</h3>
+<p>Despite the <code>varargs[string]</code> signature, the compiler does <strong>not</strong> create an
+intermediate array. It generates code that writes each converted argument
+sequentially to stdout, wrapped in <code>flockfile</code>/<code>funlockfile</code> for thread safety.
+Each argument is a temporary string, written and discarded one at a time.</p>
+<h3 id="type-safety_4">Type safety</h3>
+<p>Fully checked at compile time. Missing <code>$</code> overload = compile error.</p>
+<hr />
+<h2 id="comparison-matrix">Comparison Matrix</h2>
+<table>
+<thead>
+<tr>
+<th>Aspect</th>
+<th>Rust</th>
+<th>Go</th>
+<th>C++23</th>
+<th>Zig</th>
+<th>Swift</th>
+<th>D</th>
+<th>Nim</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Nature</strong></td>
+<td>Macro (compiler intrinsic)</td>
+<td>Function</td>
+<td>Function template</td>
+<td>Function (comptime)</td>
+<td>Function</td>
+<td>Template function</td>
+<td>Compiler built-in</td>
+</tr>
+<tr>
+<td><strong>Variadic mechanism</strong></td>
+<td>Macro expansion</td>
+<td><code>...any</code> boxing</td>
+<td>Variadic templates -&gt; type erasure</td>
+<td>Comptime tuples</td>
+<td><code>Any...</code> boxing</td>
+<td>Variadic templates</td>
+<td><code>varargs</code> with conversion</td>
+</tr>
+<tr>
+<td><strong>Type resolution</strong></td>
+<td>Compile-time</td>
+<td>Runtime (reflection)</td>
+<td>Compile-time</td>
+<td>Compile-time</td>
+<td>Runtime (protocol witness)</td>
+<td>Compile-time</td>
+<td>Compile-time</td>
+</tr>
+<tr>
+<td><strong>String conversion</strong></td>
+<td><code>Display</code> trait</td>
+<td><code>Stringer</code> interface / reflect</td>
+<td><code>std::formatter</code> specialization</td>
+<td><code>format()</code> method / <code>@typeInfo</code></td>
+<td><code>CustomStringConvertible</code></td>
+<td><code>toString()</code> / sink</td>
+<td><code>$</code> operator</td>
+</tr>
+<tr>
+<td><strong>Builds temp string?</strong></td>
+<td>No (direct write)</td>
+<td>Yes (pooled buffer)</td>
+<td>Yes (one string)</td>
+<td>No (direct write)</td>
+<td>Yes (per argument)</td>
+<td>No (sink to FILE*)</td>
+<td>Yes (per argument)</td>
+</tr>
+<tr>
+<td><strong>Format string checking</strong></td>
+<td>Compile-time</td>
+<td><code>go vet</code> only (Printf)</td>
+<td>Compile-time (<code>consteval</code>)</td>
+<td>Compile-time</td>
+<td>N/A</td>
+<td>Compile-time</td>
+<td>N/A (<code>fmt</code> macro separate)</td>
+</tr>
+<tr>
+<td><strong>Monomorphization bloat</strong></td>
+<td>Avoided (type-erased <code>write_fmt</code>)</td>
+<td>N/A (no generics in fmt)</td>
+<td>Avoided (type-erased <code>vformat</code>)</td>
+<td>Full monomorphization</td>
+<td>N/A (runtime dispatch)</td>
+<td>Full monomorphization</td>
+<td>Minimal (compiler special-cases)</td>
+</tr>
+<tr>
+<td><strong>Atomicity</strong></td>
+<td>Per-<code>println!</code> (lock + flush)</td>
+<td>Per-<code>Println</code> (single Write)</td>
+<td>Per-<code>print</code> (single write)</td>
+<td>No guarantee</td>
+<td>No guarantee</td>
+<td>Per-<code>writeln</code> (stdio lock)</td>
+<td>Per-<code>echo</code> (flockfile)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="design-lessons-for-spy">Design Lessons for SPy</h2>
+<h3 id="the-fundamental-tension">The fundamental tension</h3>
+<p>There are two main strategies, with a hybrid middle ground:</p>
+<ol>
+<li>
+<p><strong>Full monomorphization</strong> (Zig, D): generate specialized code per call site.
+   Zero runtime overhead, but binary bloat scales with number of unique print
+   call sites.</p>
+</li>
+<li>
+<p><strong>Type erasure</strong> (Rust, C++23): a thin generic layer packs arguments into a
+   type-erased container, then a single non-generic function does the
+   formatting via indirect calls. Small constant runtime cost, but binary size
+   stays flat.</p>
+</li>
+<li>
+<p><strong>Runtime boxing</strong> (Go, Swift): fully dynamic, maximum flexibility, but pays
+   boxing + reflection cost.</p>
+</li>
+</ol>
+<h3 id="recommendations-to-consider">Recommendations to consider</h3>
+<ul>
+<li>
+<p><strong>Python's <code>print()</code> has no format string</strong> -- it just calls <code>str()</code> on each
+  arg and joins with spaces. This simplifies the design enormously: no
+  compile-time format parsing needed for the basic case. Nim's <code>echo</code> is the
+  closest analogue.</p>
+</li>
+<li>
+<p><strong>The conversion protocol is the core design decision.</strong> Every language needs
+  a way for types to define "how do I become a string." In a compiled language,
+  this is typically a trait/interface/protocol. For SPy, this is the equivalent
+  of <code>__str__</code>.</p>
+</li>
+<li>
+<p><strong>Rust/C++23's type-erasure approach</strong> is worth studying if SPy cares about
+  binary size. It lets you have one copy of the output loop regardless of how
+  many different type combinations appear across the program.</p>
+</li>
+<li>
+<p><strong>The "build string vs. write directly" choice</strong> matters for performance.
+  Go's approach (build buffer, single write) gives atomicity. Rust/Zig's
+  approach (write pieces directly) avoids allocation. For a Python-like
+  <code>print()</code>, Go's approach is probably more natural since Python's <code>print()</code>
+  also builds the full output string before writing.</p>
+</li>
+<li>
+<p><strong>Consider the no-format-string case first.</strong> Python's <code>print(a, b, c)</code> is
+  much more common than <code>print(f"{a} {b} {c}")</code>. The simple case (convert each
+  arg, join with sep, write with end) can be a straightforward function if SPy
+  has a way to express "a function that takes N arguments of different types,
+  each of which implements the Stringable trait."</p>
+</li>
+</ul>
+        </article>
+        <footer>
+            Built automatically from project README files.
+        </footer>
+    </div>
+</body>
+</html>
