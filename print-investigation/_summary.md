@@ -1,0 +1,1 @@
+Survey of how print() and formatting work internally in compiled languages (Rust, Go, C++, Zig, Swift, D, Nim). Covers typing mechanisms, macro vs function, buffering strategies, and type erasure vs monomorphization tradeoffs. Aimed at designing a Python-like print() for a compiled language.
