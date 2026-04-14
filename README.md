@@ -132,7 +132,11 @@ if subdirs_with_dates:
 else:
     print("No projects yet. Create a directory with a README.md to get started!\n")
 ]]]-->
-## 8 projects
+## 9 projects
+
+### [print-investigation](https://github.com/antocuni/vibes/tree/main/print-investigation) (2026-04-14)
+
+Survey of how print() and formatting work internally in compiled languages (Rust, Go, C++, Zig, Swift, D, Nim). Covers typing mechanisms, macro vs function, buffering strategies, and type erasure vs monomorphization tradeoffs. Aimed at designing a Python-like print() for a compiled language.
 
 ### [c-io-tower](https://github.com/antocuni/vibes/tree/main/c-io-tower) (2026-03-28)
 
